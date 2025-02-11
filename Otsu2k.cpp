@@ -2,10 +2,10 @@
 using namespace std;
 using namespace cv;
 
-vector<double> normalizedHistogram(const Mat &src) {
+vector<double> normalizedHistogram(Mat &src) {
 
     // Inizializzo l'istogramma a 256 slot (Valori grayscale 0 - 255)
-    vector<double> hist(256, 0.0);
+    vector<double> hist(256);
 
     // Popolo l'istogramma iterando ogni pixel dell'immagine
     for (int i = 0; i < src.rows; i++)
@@ -23,26 +23,26 @@ vector<double> normalizedHistogram(const Mat &src) {
     return hist;
 }
 
-vector<int> otsu2k(const Mat &src) {
+vector<int> otsu2k(Mat &src) {
 
     // Ottengo l'istogramma normalizzato dell'immagine
     vector<double> hist = normalizedHistogram(src);
 
     // Calcolo la media globale dell'intensità dell'immagine
-    double globalMean = 0.0;
+    double globalMean = 0;
     for (int i = 0; i < 256; i++)
         globalMean += i * hist[i];
 
-    double maxVar = 0.0; 		// Variabile per immagazzinare la varianza interclasse massima
-    vector<int> kstar(2, 0); 	// Vettore per contenere le due soglie ottimali
+    double maxVar = 0; 		// Variabile per immagazzinare la varianza interclasse massima
+    vector<int> kstar(2); 	// Vettore per contenere le due soglie ottimali
 
     // Distribuzione della probabilità cumulativa
-    vector<double> cumProb(256, 0.0);
+    vector<double> cumProb(256);
     cumProb[0] = hist[0];
 
     // Distribuzione della media cumulativa
-    vector<double> cumMean(256, 0.0);
-    cumMean[0] = 0.0;
+    vector<double> cumMean(256);
+    cumMean[0] = 0;
 
     // Calcolo probabilità e media cumulativa per tutti i livelli di intensità
     for (int i = 1; i < 256; i++) {
@@ -83,7 +83,7 @@ vector<int> otsu2k(const Mat &src) {
     return kstar;
 }
 
-void multipleThresholds(const Mat &src, Mat &dst, int th1, int th2) {
+void multipleThresholds(Mat &src, Mat &dst, int th1, int th2) {
     dst = Mat::zeros(src.rows, src.cols, CV_8U);
 
     // Itera su ogni pixel dell'immagine
