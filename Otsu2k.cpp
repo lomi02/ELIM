@@ -3,9 +3,9 @@ using namespace std;
 using namespace cv;
 
 Mat Otsu2k(Mat &input) {
+    Mat img = input.clone();
 
     // 1. Computa l'istogramma
-    Mat img = input.clone();
     vector<double> hist(256);
     for (int x = 0; x < img.rows; x++)
         for (int y = 0; y < img.cols; y++)

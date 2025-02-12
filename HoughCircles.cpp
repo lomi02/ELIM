@@ -3,9 +3,9 @@ using namespace cv;
 using namespace std;
 
 Mat HoughCircles(Mat &input, int HoughTH, int radMin, int radMax, int CannyLTH, int CannyHTH) {
+    Mat img = input.clone();
 
     // 1. Inizializza l'immagine e preparala all'algoritmo
-    Mat img = input.clone();
     GaussianBlur(img, img, Size(3, 3), 0);
     Canny(img, img, CannyLTH, CannyHTH);
 

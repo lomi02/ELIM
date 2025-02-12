@@ -3,9 +3,9 @@ using namespace std;
 using namespace cv;
 
 Mat HoughLines(Mat &input, int HoughTH, int CannyLTH, int CannyHTH) {
+    Mat img = input.clone();
 
     // 1. Inizializza l'immagine e preparala all'algoritmo
-    Mat img = input.clone();
     GaussianBlur(img, img, Size(1, 1), 0);
     Canny(img, img, CannyLTH, CannyHTH);
 
