@@ -33,7 +33,7 @@ Mat kmeans(Mat &input, int k, int maxIterations, double convergenceThreshold) {
                 uchar pixelIntensity = img.at<uchar>(x, y);
                 int minDistance = INFINITY;
 
-                for (int i = 0; i < k; ++i) {
+                for (int i = 0; i < k; i++) {
                     int currDistance = abs(centersIntensity.at(i) - pixelIntensity);
                     if (currDistance < minDistance) {
                         minDistance = currDistance;

@@ -39,11 +39,11 @@ Mat HoughLines(Mat &input, int HoughTH, int CannyLTH, int CannyHTH) {
                 int y0 = cvRound(rho * sin(theta));
 
                 Point p1;
-                p1.x = cvRound(x0 + alpha * (-sin(theta)));
+                p1.x = cvRound(x0 + alpha * -sin(theta));
                 p1.y = cvRound(y0 + alpha * cos(theta));
 
                 Point p2;
-                p2.x = cvRound(x0 - alpha * (-sin(theta)));
+                p2.x = cvRound(x0 - alpha * -sin(theta));
                 p2.y = cvRound(y0 - alpha * cos(theta));
 
                 line(output, p1, p2, Scalar(0), 2, 0);

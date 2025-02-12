@@ -2,50 +2,67 @@
 using namespace std;
 using namespace cv;
 
-void harris(Mat &src, Mat &dst, int th, float k) {
-    dst = src.clone();
+Mat harris(Mat &input, float k, int threshTH) {
+    Mat img = input.clone();
 
-    // 1: Sobel
+    // 1. Computo la derivate orizzontale e verticale
     Mat Dx, Dy;
-    Sobel(src, Dx, CV_32F, 1, 0, 3);
-    Sobel(src, Dy, CV_32F, 0, 1, 3);
+    Sobel(img, Dx, CV_32F, 1, 0, 3);
+    Sobel(img, Dy, CV_32F, 0, 1, 3);
 
-    // 2: DxDy
-    Mat Dx2 = Dx.mul(Dx);
-    Mat Dy2 = Dy.mul(Dy);
-    Mat DxDy = Dx.mul(Dy);
+    // 2. Calcolo il prodotto delle derivate parziali
+    Mat DxDy;
+    multiply(Dx, Dy, DxDy);
 
-    // 3: Gaussian Blur
-    Mat C00, C11, C01;
-    GaussianBlur(Dx2, C00, Size(7, 7), 2.0);
-    GaussianBlur(Dy2, C11, Size(7, 7), 2.0);
-    GaussianBlur(DxDy, C01, Size(7, 7), 2.0);
+    // 3. Elevo le derivate in potenza di 2 e uso il filtro gaussiano
+    pow(Dx, 2, Dx);
+    pow(Dy, 2, Dy);
+    GaussianBlur(Dx, Dx, Size(3, 3), 0, 0);
+    GaussianBlur(Dy, Dy, Size(3, 3), 0, 0);
+    GaussianBlur(DxDy, DxDy, Size(3, 3), 0, 0);
 
-    // 4: Harris
-    Mat det = C00.mul(C11) - C01.mul(C01);  // (C00 * C11) - (C01 * C10)
-    Mat trace = C00 + C11;
-    Mat R = det - k * trace.mul(trace);     // det - k * trace^2
+    // 4. Calcolo le diagonali della matrice di derivazione
+    Mat mainDiagMult;
+    multiply(Dx, Dy, mainDiagMult);
+    Mat secondDiagMult;
+    pow(DxDy, 2, secondDiagMult);
 
-    // 5: Normalize and circle corners
-    normalize(R, R, 0, 255, NORM_MINMAX, CV_32F);
+    // 5. Computo i componenti per la formula di Harris
+    Mat det = mainDiagMult - secondDiagMult;
+    Mat trace = Dx + Dy;
+    pow(trace, 2, trace);
 
-    // &: Circle Corners
-    for (int i = 0; i < R.rows; i++)
-        for (int j = 0; j < R.cols; j++)
-            if ((int) R.at<float>(i, j) > th)
-                circle(dst, Point(j, i), 7, Scalar(0), 2);
+    // 6. Formula di Harris
+    Mat R = det - (k * trace);
+
+    // 7. Applico la normalizzazione e la sogliatura per individuare i bordi
+    normalize(R, R, 0, 255, NORM_MINMAX, CV_8U);
+    threshold(R, R, threshTH, 255, THRESH_BINARY);
+
+    // 8. Cerchio i corner dell'immagine
+    Mat out = input.clone();
+    for (int x = 0; x < R.rows; ++x) {
+        for (int y = 0; y < R.cols; ++y) {
+            if (R.at<uchar>(x, y) > 0) {
+                circle(out, Point(y, x), 3, Scalar(0), 1, 8, 0);
+            }
+        }
+    }
+
+    return out;
 }
 
 int main(int argc, char **argv) {
     const char *path = argc > 1 ? argv[1] : "../immagini/foglia.png";
-    Mat dst, src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
+    Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
 
     //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
     if (src.empty()) return -1;
 
-    harris(src, dst, 50, 0.03F);
+    float k = 0.05;
+    int threshTH = 145;
+    Mat dst = harris(src, k, threshTH);
 
-    imshow("Sorgente", src);
     imshow("Harris", dst);
     waitKey(0);
 
