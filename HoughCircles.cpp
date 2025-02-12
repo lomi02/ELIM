@@ -2,55 +2,64 @@
 using namespace cv;
 using namespace std;
 
-void houghCircles(Mat &src, Mat &dst, int CannyLTH, int CannyHTH, int HoughTH, int Rmin, int Rmax) {
-    dst = src.clone();
+Mat HoughCircles(Mat &input, int HoughTH, int radMin, int radMax, int CannyLTH, int CannyHTH) {
 
-    // 1: Precompila i valori di seno e coseno
-    vector<double> cos_theta(360);
-    vector<double> sin_theta(360);
-    for (int theta = 0; theta < 360; theta++) {
-        cos_theta[theta] = cos(theta * CV_PI / 180);
-        sin_theta[theta] = sin(theta * CV_PI / 180);
+    // 1. Inizializza l'immagine e preparala all'algoritmo
+    Mat img = input.clone();
+    GaussianBlur(img, img, Size(3, 3), 0);
+    Canny(img, img, CannyLTH, CannyHTH);
+
+    // 2. Inizializza l'accumulatore
+    int radOffset = radMax - radMin + 1;
+    int sizes[] = {img.rows, img.cols, radOffset};
+    auto votes = Mat(3, sizes, CV_8U);
+
+    // 3. Compila il diagramma dei voti
+    for (int x = 0; x < img.rows; x++) {
+        for (int y = 0; y < img.cols; y++) {
+            if (img.at<uchar>(x, y) == 255) {
+                for (int rad = radMin; rad < radMax; rad++) {
+                    for (int thetaDeg = 0; thetaDeg < 360; thetaDeg++) {
+                        double thetaRad = thetaDeg * CV_PI / 180;
+
+                        int alpha = cvRound(x - rad * cos(thetaRad));
+                        int beta = cvRound(y - rad * sin(thetaRad));
+
+                        if (alpha >= 0 and alpha < img.rows and beta >= 0 and beta < img.cols)
+                            votes.at<uchar>(alpha, beta, rad - radMin)++;
+                    }
+                }
+            }
+        }
     }
 
-    // 2: Inizializzazione della matrice di voti
-    vector<vector<vector<int> > > votes(src.rows, vector<vector<int> >(src.cols, vector<int>(Rmax - Rmin + 1, 0)));
-
-    // 3: Gaussian Blur e Canny
-    Mat blurred, edges;
-    GaussianBlur(src, blurred, Size(7, 7), 0, 0);
-    Canny(blurred, edges, CannyLTH, CannyHTH);
-
-    // 4: Accumulo dei voti per i possibili cerchi
-    for (int x = 0; x < edges.rows; x++)
-        for (int y = 0; y < edges.cols; y++)
-            if (edges.at<uchar>(x, y) == 255)
-                for (int r = Rmin; r <= Rmax; r++)
-                    for (int theta = 0; theta < 360; theta++) {
-                        int a = y - r * cos_theta[theta];
-                        int b = x - r * sin_theta[theta];
-                        if (a >= 0 && a < edges.cols && b >= 0 && b < edges.rows)
-                            votes[b][a][r - Rmin]++;
-                    }
-
-    // 5: Disegno dei cerchi rilevati sull'immagine di destinazione
-    for (int r = Rmin; r <= Rmax; r++)
-        for (int b = 0; b < edges.rows; b++)
-            for (int a = 0; a < edges.cols; a++)
-                if (votes[b][a][r - Rmin] > HoughTH) {
-                    circle(dst, Point(a, b), 3, Scalar(0), 2, 8, 0);
-                    circle(dst, Point(a, b), r, Scalar(0), 2, 8, 0);
+    // 4. Disegna i cerchi
+    Mat output = input.clone();
+    for (int rad = radMin; rad < radMax; rad++) {
+        for (int alpha = 0; alpha < img.rows; alpha++) {
+            for (int beta = 0; beta < img.cols; beta++) {
+                if (votes.at<uchar>(alpha, beta, rad - radMin) > HoughTH) {
+                    circle(output, Point(beta, alpha), rad, Scalar(0), 2, 8);
                 }
+            }
+        }
+    }
+    return output;
 }
 
 int main(int argc, char **argv) {
     const char *path = argc > 1 ? argv[1] : "../immagini/monete.png";
-    Mat dst, src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
+    Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
 
     //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
     if (src.empty()) return -1;
 
-    houghCircles(src, dst, 100, 200, 150, 20, 100);
+    int HoughTH = 190;
+    int radMin = 20;
+    int radMax = 70;
+    int CannyLTH = 40;
+    int CannyHTH = 80;
+    Mat dst = HoughCircles(src, HoughTH, radMin, radMax, CannyLTH, CannyHTH);
 
     imshow("Hough Circles", dst);
     waitKey(0);
