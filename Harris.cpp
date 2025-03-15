@@ -41,13 +41,10 @@ Mat harris(Mat &input, float k, int threshTH) {
 
     // 8. Cerchio i corner dell'immagine
     Mat out = input.clone();
-    for (int x = 0; x < R.rows; ++x) {
-        for (int y = 0; y < R.cols; ++y) {
-            if (R.at<uchar>(x, y) > 0) {
+    for (int x = 0; x < R.rows; x++)
+        for (int y = 0; y < R.cols; y++)
+            if (R.at<uchar>(x, y) > 0)
                 circle(out, Point(y, x), 3, Scalar(0), 1, 8, 0);
-            }
-        }
-    }
 
     return out;
 }
