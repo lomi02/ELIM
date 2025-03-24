@@ -5,7 +5,7 @@ using namespace cv;
 Mat harris(Mat &input, float k, int threshTH) {
     Mat img = input.clone();
 
-    // 1. Computo la derivate orizzontale e verticale
+    // 1. Computo la derivata orizzontale e verticale
     Mat Dx, Dy;
     Sobel(img, Dx, CV_32F, 1, 0, 3);
     Sobel(img, Dy, CV_32F, 0, 1, 3);
@@ -15,22 +15,21 @@ Mat harris(Mat &input, float k, int threshTH) {
     multiply(Dx, Dy, DxDy);
 
     // 3. Elevo le derivate in potenza di 2 e uso il filtro gaussiano
-    pow(Dx, 2, Dx);
-    pow(Dy, 2, Dy);
-    GaussianBlur(Dx, Dx, Size(3, 3), 0, 0);
-    GaussianBlur(Dy, Dy, Size(3, 3), 0, 0);
+    Mat Dx2, Dy2;
+    pow(Dx, 2, Dx2);
+    pow(Dy, 2, Dy2);
+    GaussianBlur(Dx2, Dx2, Size(3, 3), 0, 0);
+    GaussianBlur(Dy2, Dy2, Size(3, 3), 0, 0);
     GaussianBlur(DxDy, DxDy, Size(3, 3), 0, 0);
 
     // 4. Calcolo le diagonali della matrice di derivazione
-    Mat mainDiagMult;
-    multiply(Dx, Dy, mainDiagMult);
-    Mat secondDiagMult;
-    pow(DxDy, 2, secondDiagMult);
+    Mat mainDiagMult, secondDiagMult;
+    multiply(Dx2, Dy2, mainDiagMult);
+    multiply(DxDy, DxDy, secondDiagMult);
 
     // 5. Computo i componenti per la formula di Harris
-    Mat det = mainDiagMult - secondDiagMult;
-    Mat trace = Dx + Dy;
-    pow(trace, 2, trace);
+    Mat det = mainDiagMult - secondDiagMult, trace;
+    pow(Dx2 + Dy2, 2, trace);
 
     // 6. Formula di Harris
     Mat R = det - (k * trace);

@@ -62,14 +62,14 @@ Mat Otsu2k(Mat &input) {
     // 8. Applico il filtro gaussiano per ridurre il rumore e poi effettuo una sogliatura con le soglie ottimali
     GaussianBlur(img, img, Size(3, 3), 0, 0);
     Mat out = Mat::zeros(img.rows, img.cols, CV_8U);
-    for (int x = 0; x < img.rows; x++) {
+    for (int x = 0; x < img.rows; x++)
         for (int y = 0; y < img.cols; y++) {
             if (img.at<uchar>(x, y) >= optimalTH.at(1))
                 out.at<uchar>(x, y) = 255;
             else if (img.at<uchar>(x, y) >= optimalTH.at(0))
                 out.at<uchar>(x, y) = 127;
         }
-    }
+
 
     return out;
 }

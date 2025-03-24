@@ -28,7 +28,7 @@ Mat kmeans(Mat &input, int k, int maxIterations, double convergenceThreshold) {
             clusters.at(i).clear();
 
         // 4. Assegnazione di ogni pixel al cluster più vicino
-        for (int x = 0; x < img.rows; x++) {
+        for (int x = 0; x < img.rows; x++)
             for (int y = 0; y < img.cols; y++) {
                 uchar pixelIntensity = img.at<uchar>(x, y);
                 int minDistance = INFINITY;
@@ -45,7 +45,6 @@ Mat kmeans(Mat &input, int k, int maxIterations, double convergenceThreshold) {
                 clusters.at(closestClusterIndex).emplace_back(y, x);
                 clusteredImg.at<uchar>(x, y) = centersIntensity.at(closestClusterIndex);
             }
-        }
 
         // 6. Aggiornamento dei centroidi
         for (int i = 0; i < k; i++) {

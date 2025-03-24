@@ -15,23 +15,20 @@ Mat HoughLines(Mat &input, int HoughTH, int CannyLTH, int CannyHTH) {
     Mat votes = Mat::zeros(diagLen * 2, maxTheta, CV_8U);
 
     // 3. Compila il diagramma dei voti
-    for (int x = 0; x < img.rows; x++) {
-        for (int y = 0; y < img.cols; y++) {
-            if (img.at<uchar>(x, y) == 255) {
+    for (int x = 0; x < img.rows; x++)
+        for (int y = 0; y < img.cols; y++)
+            if (img.at<uchar>(x, y) == 255)
                 for (int theta = 0; theta < maxTheta; theta++) {
                     int rho = cvRound(y * cos(theta) + x * sin(theta));
                     int rhoIndex = rho + diagLen;
                     votes.at<uchar>(rhoIndex, theta)++;
                 }
-            }
-        }
-    }
 
     // 4. Disegna le linee
     int alpha = diagLen * 2;
     Mat output = input.clone();
-    for (int rhoIndex = 0; rhoIndex < votes.rows; rhoIndex++) {
-        for (int theta = 0; theta < votes.cols; theta++) {
+    for (int rhoIndex = 0; rhoIndex < votes.rows; rhoIndex++)
+        for (int theta = 0; theta < votes.cols; theta++)
             if (votes.at<uchar>(rhoIndex, theta) > HoughTH) {
                 int rho = rhoIndex - diagLen;
 
@@ -48,8 +45,7 @@ Mat HoughLines(Mat &input, int HoughTH, int CannyLTH, int CannyHTH) {
 
                 line(output, p1, p2, Scalar(0), 2, 0);
             }
-        }
-    }
+
     return output;
 }
 
