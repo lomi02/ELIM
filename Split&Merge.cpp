@@ -14,8 +14,7 @@ public:
     vector<bool> mergedFlags;
     double stddev, mean;    // stddev = Standard Deviation
 
-    TNode(Rect region) : region(region), UL(nullptr), UR(nullptr), LL(nullptr), LR(nullptr), mergedFlags(4, false) {
-    }
+    TNode(Rect region) : region(region), UL(nullptr), UR(nullptr), LL(nullptr), LR(nullptr), mergedFlags(4, false) {}
 
     void addMergedRegion(TNode *region) { mergedRegions.push_back(region); }
     void setMergedFlag(int index) { mergedFlags[index] = true; }
@@ -92,7 +91,7 @@ void segment(TNode *root, Mat &src) {
         meanValue /= root->mergedRegions.size();
 
         // 4.3 Applica il valore medio alle regioni unite
-        for (auto region: root->mergedRegions) src(region->region) = (int) meanValue;
+        for (auto region: root->mergedRegions) src(region->region) = static_cast<int>(meanValue);
 
         // 4.4 Controlla quali regioni sono state unite e segmenta le rimanenti
         if (root->mergedRegions.size() > 1) {
@@ -106,8 +105,9 @@ void segment(TNode *root, Mat &src) {
 
 // 5. Funzione principale per applicare il metodo split-and-merge
 void Split_Merge(Mat &src, Mat &segmentedDst) {
+
     // 5.1 Calcola la dimensione più grande possibile come potenza di 2
-    int size = pow(2, (int) (log(min(src.rows, src.cols)) / log(2)));
+    int size = pow(2, static_cast<int>(log(min(src.rows, src.cols)) / log(2)));
 
     // 5.2 Ritaglia l'immagine
     Mat croppedSrc = src(Rect(0, 0, size, size)).clone();

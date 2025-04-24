@@ -102,7 +102,7 @@ uchar regionGrowing(const Mat &src, Mat &dst, double minSizeRegFactor, int maxRe
             cout << "Progress: " << (x * 100) / src.cols << "%" << endl;
     }
 
-    cout << "Total regions: " << (int) currLabel - 1 << endl;
+    cout << "Total regions: " << static_cast<int>(currLabel) - 1 << endl;
     return currLabel;
 }
 
