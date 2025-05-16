@@ -22,7 +22,7 @@ using namespace cv;
  *
  * @return Immagine binaria con pixel separati in sfondo, oggetto e primo piano
  */
-Mat otsu2k(Mat& input, int blurSize = 3, float blurSigma = 0.5) {
+Mat otsu2k(Mat &input, int blurSize = 3, float blurSigma = 0.5) {
     Mat img = input.clone();
 
     // Passo 1: Calcolo dell'istogramma normalizzato dell'immagine
