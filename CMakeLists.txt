@@ -5,6 +5,6 @@ set(CMAKE_CXX_STANDARD 26)
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_executable(AlgoritmiEsame RegionGrowing.cpp)
+add_executable(AlgoritmiEsame Otsu2k.cpp)
 
 target_link_libraries(AlgoritmiEsame ${OpenCV_LIBS})
