@@ -10,7 +10,7 @@ Mat canny(Mat & input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurS
     Sobel(img, x_gradient, CV_32F, 1, 0);
     Sobel(img, y_gradient, CV_32F, 0, 1);
 
-    Mat magnitude = cv::abs(x_gradient) + cv::abs(y_gradient);
+    Mat magnitude = abs(x_gradient) + abs(y_gradient);
     normalize(magnitude, magnitude, 0, 255, NORM_MINMAX, CV_8U);
 
     Mat phase;
@@ -55,9 +55,9 @@ Mat canny(Mat & input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurS
             if (NMS.at<uchar>(Point(x, y)) > cannyTHH) {
                 edgesImg.at<uchar>(Point(x, y)) = 255;
 
-                Rect regionOfInterest(x - 1, y - 1, 3, 3);
-                for (int roi_y = regionOfInterest.y; roi_y < regionOfInterest.y + regionOfInterest.height; ++roi_y)
-                    for (int roi_x = regionOfInterest.x; roi_x < regionOfInterest.x + regionOfInterest.width; ++roi_x)
+                Rect roi(x - 1, y - 1, 3, 3);
+                for (int roi_y = roi.y; roi_y < roi.y + roi.height; ++roi_y)
+                    for (int roi_x = roi.x; roi_x < roi.x + roi.width; ++roi_x)
                         if (NMS.at<uchar>(Point(roi_x, roi_y)) > cannyTHL
                             && NMS.at<uchar>(Point(roi_x, roi_y)) < cannyTHH)
                             edgesImg.at<uchar>(Point(roi_x, roi_y)) = 255;

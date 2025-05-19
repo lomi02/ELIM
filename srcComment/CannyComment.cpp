@@ -34,7 +34,7 @@ Mat canny(Mat & input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurS
     Sobel(img, y_gradient, CV_32F, 0, 1);
 
     // Calcola la magnitudo approssimata come somma dei valori assoluti
-    Mat magnitude = cv::abs(x_gradient) + cv::abs(y_gradient);
+    Mat magnitude = abs(x_gradient) + abs(y_gradient);
 
     // Normalizza la magnitudo nell'intervallo 0-255
     normalize(magnitude, magnitude, 0, 255, NORM_MINMAX, CV_8U);
@@ -99,9 +99,9 @@ Mat canny(Mat & input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurS
                 edgesImg.at<uchar>(Point(x, y)) = 255;
 
                 // Analisi dell'intorno 3x3 per trovare bordi deboli collegati
-                Rect regionOfInterest(x - 1, y - 1, 3, 3);
-                for (int roi_y = regionOfInterest.y; roi_y < regionOfInterest.y + regionOfInterest.height; ++roi_y)
-                    for (int roi_x = regionOfInterest.x; roi_x < regionOfInterest.x + regionOfInterest.width; ++roi_x)
+                Rect roi(x - 1, y - 1, 3, 3);
+                for (int roi_y = roi.y; roi_y < roi.y + roi.height; ++roi_y)
+                    for (int roi_x = roi.x; roi_x < roi.x + roi.width; ++roi_x)
 
                         // Se il pixel è tra le due soglie e collegato a un bordo forte, viene mantenuto
                         if (NMS.at<uchar>(Point(roi_x, roi_y)) > cannyTHL
