@@ -48,7 +48,7 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurSi
     Mat NMS = Mat::zeros(magnitude.size(), CV_8U);
 
     // Scansione dell'immagine (escludendo i bordi di 1 pixel)
-    for (int y = 1; y < magnitude.rows - 1; y++) {
+    for (int y = 1; y < magnitude.rows - 1; y++)
         for (int x = 1; x < magnitude.cols - 1; x++) {
 
             // Normalizzazione dell'angolo in [0,180] gradi
@@ -88,13 +88,12 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurSi
             if (curr >= pixel1 && curr >= pixel2)
                 NMS.at<uchar>(y, x) = curr;
         }
-    }
 
     // Passo 4: Sogliatura con isteresi
     Mat edges = Mat::zeros(NMS.size(), CV_8U);
 
     // Scansione completa dell'immagine
-    for (int y = 0; y < NMS.rows; y++) {
+    for (int y = 0; y < NMS.rows; y++)
         for (int x = 0; x < NMS.cols; x++) {
             uchar val = NMS.at<uchar>(y, x);
 
@@ -103,20 +102,18 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurSi
                 edges.at<uchar>(y, x) = 255;
 
                 // Analisi dell'intorno 3x3 per trovare bordi deboli collegati
-                for (int dy = -1; dy <= 1; dy++) {
+                for (int dy = -1; dy <= 1; dy++)
                     for (int dx = -1; dx <= 1; dx++) {
                         int nx = x + dx, ny = y + dy;
 
                         // Verifica che il pixel sia dentro i bordi e nella soglia debole
-                        if (nx >= 0 && nx < NMS.cols && ny >= 0 && ny < NMS.rows &&
-                            NMS.at<uchar>(ny, nx) >= cannyTHL) {
+                        if (nx >= 0 && nx < NMS.cols && ny >= 0 && ny < NMS.rows
+                            && NMS.at<uchar>(ny, nx) >= cannyTHL) {
                             edges.at<uchar>(ny, nx) = 255;
                         }
                     }
-                }
             }
         }
-    }
 
     return edges;
 }

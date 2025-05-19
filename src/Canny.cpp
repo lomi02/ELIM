@@ -17,7 +17,7 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurSi
     cv::phase(x_gradient, y_gradient, phase);
 
     Mat NMS = Mat::zeros(magnitude.size(), CV_8U);
-    for (int y = 1; y < magnitude.rows - 1; y++) {
+    for (int y = 1; y < magnitude.rows - 1; y++)
         for (int x = 1; x < magnitude.cols - 1; x++) {
             float angle = phase.at<float>(y, x);
             angle = fmod(angle + 22.5, 180);
@@ -42,7 +42,6 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurSi
             if (curr >= pixel1 && curr >= pixel2)
                 NMS.at<uchar>(y, x) = curr;
         }
-    }
 
     Mat edges = Mat::zeros(NMS.size(), CV_8U);
     for (int y = 0; y < NMS.rows; y++)
