@@ -2,12 +2,12 @@
 using namespace std;
 using namespace cv;
 
-Mat harris(Mat &input, float k, int sobelSize, int threshTH, int blurSize, float blurSigma) {
+Mat harris(Mat &input, float k, int threshTH, int blurSize, float blurSigma) {
     Mat img = input.clone();
 
     Mat Dx, Dy;
-    Sobel(img, Dx, CV_32F, 1, 0, sobelSize);
-    Sobel(img, Dy, CV_32F, 0, 1, sobelSize);
+    Sobel(img, Dx, CV_32F, 1, 0);
+    Sobel(img, Dy, CV_32F, 0, 1);
 
     Mat Dx2, Dy2, DxDy;
     multiply(Dx, Dx, Dx2);
@@ -42,11 +42,10 @@ int main(int argc, char **argv) {
     if (src.empty()) return -1;
 
     float k = 0.05;
-    int sobelSize = 3;
     int blurSize = 3;
     float blurSigma = 2.0;
     int threshTH = 117;
-    Mat dst = harris(src, k, sobelSize, threshTH, blurSize, blurSigma);
+    Mat dst = harris(src, k, threshTH, blurSize, blurSigma);
 
     imshow("Harris", dst);
     waitKey(0);

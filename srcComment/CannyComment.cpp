@@ -51,7 +51,8 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurSi
     for (int y = 1; y < magnitude.rows - 1; y++)
         for (int x = 1; x < magnitude.cols - 1; x++) {
 
-            // Normalizzazione dell'angolo in [0,180] gradi
+            // Normalizza l'angolo del gradiente in [0,180] con offset 22.5° per discretizzare
+            // le 4 direzioni principali (0°, 45°, 90°, 135°) usate nella soppressione non-massima
             float angle = phase.at<float>(y, x);
             angle = fmod(angle + 22.5, 180);
 

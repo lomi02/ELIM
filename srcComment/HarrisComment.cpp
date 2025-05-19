@@ -16,22 +16,21 @@ using namespace cv;
  *
  * @param input     Immagine in input (scala di grigi)
  * @param k         Parametro del rilevatore di Harris (tipicamente tra 0.04 e 0.06)
- * @param sobelSize Dimensione del kernel Sobel per il calcolo delle derivate
  * @param threshTH  Soglia per il rilevamento degli angoli (default 70)
  * @param blurSize  Dimensione del kernel gaussiano per lo smoothing (default 3)
  * @param blurSigma Deviazione standard per lo sfocamento gaussiano (default 0.5)
  *
  * @return Immagine con gli angoli rilevati marcati da cerchi
  */
-Mat harris(Mat &input, float k, int sobelSize, int threshTH, int blurSize, float blurSigma) {
+Mat harris(Mat &input, float , int threshTH, int blurSize, float blurSigma) {
     Mat img = input.clone();
 
     // Passo 1: Calcolo delle derivate spaziali usando Sobel
     // Dx = derivata orizzontale (rispetto a x)
     // Dy = derivata verticale (rispetto a y)
     Mat Dx, Dy;
-    Sobel(img, Dx, CV_32F, 1, 0, sobelSize);  // Derivata in x (CV_32F per precisione floating point)
-    Sobel(img, Dy, CV_32F, 0, 1, sobelSize);  // Derivata in y
+    Sobel(img, Dx, CV_32F, 1, 0);  // Derivata in x (CV_32F per precisione floating point)
+    Sobel(img, Dy, CV_32F, 0, 1);  // Derivata in y
 
     // Passo 2: Calcolo dei prodotti delle derivate per il tensore strutturale
     // Dx² = quadrato della derivata in x
