@@ -23,61 +23,58 @@ using namespace cv;
  *
  * @return Immagine con gli angoli rilevati marcati da cerchi
  */
-Mat harris(Mat & input, float k, int sobelSize, int threshTH = 70, int blurSize = 3, float blurSigma = 0.5) {
+Mat harris(Mat &input, float k, int sobelSize, int threshTH, int blurSize, float blurSigma) {
     Mat img = input.clone();
 
-    // Passo 1: Calcolo delle derivate orizzontali (Ix) e verticali (Iy)
-    // Usiamo l'operatore di Sobel per stimare le derivate spaziali
-    Mat Ix, Iy;
-    Sobel(img, Ix, CV_32F, 1, 0, sobelSize);    // Derivata in x (orizzontale)
-    Sobel(img, Iy, CV_32F, 0, 1, sobelSize);    // Derivata in y (verticale)
+    // Passo 1: Calcolo delle derivate spaziali usando Sobel
+    // Dx = derivata orizzontale (rispetto a x)
+    // Dy = derivata verticale (rispetto a y)
+    Mat Dx, Dy;
+    Sobel(img, Dx, CV_32F, 1, 0, sobelSize);  // Derivata in x (CV_32F per precisione floating point)
+    Sobel(img, Dy, CV_32F, 0, 1, sobelSize);  // Derivata in y
 
-    // Passo 2: Calcolo dei prodotti delle derivate e dei loro quadrati
-    // Questi termini sono necessari per costruire il tensore strutturale
-    Mat IxIy;   // Prodotto Ix*Iy
-    multiply(Ix, Iy, IxIy);
+    // Passo 2: Calcolo dei prodotti delle derivate per il tensore strutturale
+    // Dx² = quadrato della derivata in x
+    // Dy² = quadrato della derivata in y
+    // DxDy = prodotto delle derivate in x e y
+    Mat Dx2, Dy2, DxDy;
+    multiply(Dx, Dx, Dx2);  // Calcola Dx²
+    multiply(Dy, Dy, Dy2);  // Calcola Dy²
+    multiply(Dx, Dy, DxDy); // Calcola Dx*Dy
 
-    pow(Ix, 2, Ix);     // Quadrato di Ix (Ix²)
-    pow(Iy, 2, Iy);     // Quadrato di Iy (Iy²)
+    // Passo 3: Smoothing gaussiano delle derivate
+    // Applica un filtro gaussiano per integrare le informazioni su un intorno
+    GaussianBlur(Dx2, Dx2, Size(blurSize, blurSize), blurSigma, blurSigma);     // Smoothing di Dx²
+    GaussianBlur(Dy2, Dy2, Size(blurSize, blurSize), blurSigma, blurSigma);     // Smoothing di Dy²
+    GaussianBlur(DxDy, DxDy, Size(blurSize, blurSize), blurSigma, blurSigma);   // Smoothing di DxDy
 
-    // Passo 3: Smoothing gaussiano delle immagini delle derivate
-    // Lo smoothing integra le informazioni su un intorno di ogni pixel
-    GaussianBlur(Ix, Ix, Size(blurSize, blurSize), blurSigma, blurSigma);
-    GaussianBlur(Iy, Iy, Size(blurSize, blurSize), blurSigma, blurSigma);
-    GaussianBlur(IxIy, IxIy, Size(blurSize, blurSize), blurSigma, blurSigma);
+    // Passo 4: Calcolo del determinante e traccia del tensore strutturale
+    // det(M) = Dx² * Dy² - (DxDy)²
+    // trace(M) = Dx² + Dy²
+    Mat det = Dx2.mul(Dy2) - DxDy.mul(DxDy);    // Calcola il determinante
+    Mat trace = Dx2 + Dy2;                      // Calcola la traccia
 
-    // Passo 4: Calcolo degli elementi del tensore strutturale M
-    // M = [Ix²   IxIy]
-    //     [IxIy   Iy²]
-    Mat detM;   // Determinante di M (Ix²*Iy² - (IxIy)²)
-    multiply(Ix, Iy, detM);
-    Mat IxIy_squared;
-    pow(IxIy, 2, IxIy_squared);
-    detM -= IxIy_squared;
-
-    Mat traceM;     // Traccia di M (Ix² + Iy²)
-    pow(Ix + Iy, 2, traceM);
-
-    // Passo 5: Calcolo della funzione di risposta di Harris R
-    // R = det(M) - k*trace(M)²
+    // Passo 5: Calcolo della risposta di Harris
+    // R = det(M) - k * trace(M)²
     // Valori alti di R indicano la presenza di un angolo
-    Mat harrisResponse = detM - k * traceM;
+    Mat R = det - k * trace.mul(trace);
 
     // Normalizzazione della risposta nell'intervallo 0-255
-    normalize(harrisResponse, harrisResponse, 0, 255, NORM_MINMAX, CV_8U);
+    // Converti in formato 8-bit per l'accesso ai pixel
+    normalize(R, R, 0, 255, NORM_MINMAX, CV_8U);
 
     // Passo 6: Sogliatura per identificare gli angoli
     // I pixel con valore superiore alla soglia sono considerati angoli
-    threshold(harrisResponse, harrisResponse, threshTH, 255, THRESH_BINARY);
+    threshold(R, R, threshTH, 255, THRESH_BINARY);
 
     // Passo 7: Disegno dei cerchi nelle posizioni degli angoli rilevati
     Mat out = input.clone();
-    for (int y = 0; y < harrisResponse.rows; ++y)
-        for (int x = 0; x < harrisResponse.cols; ++x)
-            if (harrisResponse.at<uchar>(Point(x, y)) > 0)
+    for (int y = 0; y < R.rows; y++)
+        for (int x = 0; x < R.cols; x++)
+            if (R.at<uchar>(y, x) > 0)  // Se è un angolo
 
-                // Disegna un cerchio di raggio 3 pixel in posizione (x, y)
-                circle(out, Point(x, y), 3, Scalar(255), 1, 8, 0);
+                // Disegna un cerchio nero di raggio 3 pixel
+                circle(out, Point(x, y), 3, Scalar(0), 1, 8, 0);
 
     return out;
 }
