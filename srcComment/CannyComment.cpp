@@ -19,7 +19,7 @@ using namespace cv;
  *
  * @return Immagine binaria con i bordi rilevati (bordi=255, sfondo=0)
  */
-Mat canny(Mat & input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurSigma = 0.5) {
+Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurSigma = 0.5) {
     Mat img = input.clone();
 
     // Passo 1: Applicazione dello sfocamento gaussiano per ridurre il rumore
@@ -48,34 +48,33 @@ Mat canny(Mat & input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurS
     uchar pixel1, pixel2;
 
     // Scansiona tutta l'immagine escludendo i bordi
-    for (int y = 1; y < magnitude.rows - 1; ++y) {
+    for (int y = 1; y < magnitude.rows - 1; ++y)
         for (int x = 1; x < magnitude.cols - 1; ++x) {
             float angle = phase.at<float>(Point(x, y));
 
-            // Determina la direzione del gradiente e seleziona i pixel adiacenti
-            // per il confronto nella direzione perpendicolare al bordo
-            if ((angle >= 360-22.5 && angle <= 22.5)
-            || (angle >= 360-22.5+180 && angle <= 22.5+180)) {
+            // Determina la direzione del gradiente e seleziona i pixel adiacenti per il confronto nella direzione perpendicolare al bordo
+            if ((angle >= 360 - 22.5 && angle <= 22.5)
+            || (angle >= 360 - 22.5 + 180 && angle <= 22.5 + 180)) {
 
                 // Direzione orizzontale - confronta pixel a sinistra e destra
                 pixel1 = magnitude.at<uchar>(Point(x + 1, y));
                 pixel2 = magnitude.at<uchar>(Point(x - 1, y));
-            }
-            else if ((angle >= 22.5 && angle <= 22.5+45)
-            || (angle >= 22.5+180 && angle <= 22.5+45+180)) {
+
+            } else if ((angle >= 22.5 && angle <= 22.5 + 45)
+            || (angle >= 22.5 + 180 && angle <= 22.5 + 45 + 180)) {
 
                 // Direzione diagonale 45° - confronta pixel nelle diagonali opposte
                 pixel1 = magnitude.at<uchar>(Point(x - 1, y + 1));
                 pixel2 = magnitude.at<uchar>(Point(x + 1, y - 1));
-            }
-            else if ((angle >= 22.5+45 && angle <= 22.5+90)
-            || (angle >= 22.5+45+180 && angle <= 22.5+90+180)) {
+
+            } else if ((angle >= 22.5 + 45 && angle <= 22.5 + 90)
+            || (angle >= 22.5 + 45 + 180 && angle <= 22.5 + 90 + 180)) {
 
                 // Direzione verticale - confronta pixel sopra e sotto
                 pixel1 = magnitude.at<uchar>(Point(x, y + 1));
                 pixel2 = magnitude.at<uchar>(Point(x, y - 1));
-            }
-            else {
+
+            } else {
 
                 // Direzione diagonale 135° - confronta pixel nelle diagonali opposte
                 pixel1 = magnitude.at<uchar>(Point(x + 1, y - 1));
@@ -87,7 +86,6 @@ Mat canny(Mat & input, int cannyTHL, int cannyTHH, int blurSize = 3, float blurS
             if (currentMagnitude < pixel1 || currentMagnitude < pixel2)
                 NMS.at<uchar>(Point(x, y)) = 0;
         }
-    }
 
     // Passo 4: Sogliatura con isteresi per identificare i bordi forti e deboli
     Mat edgesImg = Mat::zeros(NMS.rows, NMS.cols, NMS.type());
