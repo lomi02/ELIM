@@ -57,7 +57,7 @@ Mat hough_lines(Mat &input, int houghTH, int cannyTHL, int cannyTHH, int blurSiz
 
     // Passo 4: Disegna le linee rilevate sull'immagine originale
     Mat lineImg = input.clone();
-    int lineOffset = diagonalLength * 2; // Offset per estendere le linee
+    int lineLength = max(img.rows, img.cols);   // Offset per estendere le linee
 
     // Itera su tutti i possibili valori di rho e theta
     for (int rhoIndex = 0; rhoIndex < votes.rows; ++rhoIndex)
@@ -68,18 +68,18 @@ Mat hough_lines(Mat &input, int houghTH, int cannyTHL, int cannyTHH, int blurSiz
                 int rho = rhoIndex - diagonalLength;    // Ripristina il valore originale di rho
 
                 // Calcola le coordinate di due punti per disegnare la linea
-                int x0 = cvRound(rho * cos(theta));
-                int y0 = cvRound(rho * sin(theta));
+                double a = cos(theta), b = sin(theta);
+                double x0 = a * rho, y0 = b * rho;
 
                 // Primo punto della linea
                 Point point1;
-                point1.x = cvRound(x0 + lineOffset * -sin(theta));
-                point1.y = cvRound(y0 + lineOffset * cos(theta));
+                point1.x = cvRound(x0 + lineLength * (-b));
+                point1.y = cvRound(y0 + lineLength * (a));
 
                 // Secondo punto della linea
                 Point point2;
-                point2.x = cvRound(x0 - lineOffset * -sin(theta));
-                point2.y = cvRound(y0 - lineOffset * cos(theta));
+                point2.x = cvRound(x0 - lineLength * (-b));
+                point2.y = cvRound(y0 - lineLength * (a));
 
                 // Disegna la linea sull'immagine
                 line(lineImg, point1, point2, Scalar(0), 2, 0);
