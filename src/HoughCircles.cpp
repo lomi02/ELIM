@@ -20,7 +20,7 @@ Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int can
                         int alpha = cvRound(x - radius * cos(thetaRadians));
                         int beta = cvRound(y - radius * sin(thetaRadians));
                         if (alpha >= 0 and alpha < img.cols and beta >= 0 and beta < img.rows)
-                            votes.at<uchar>(alpha, beta, radius - radiusMin)++;
+                            votes.at<uchar>(beta, alpha, radius - radiusMin)++;
                     }
 
     Mat out = input.clone();
@@ -28,7 +28,7 @@ Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int can
     for (int radius = radiusMin; radius < radiusMax; ++radius)
         for (int alpha = 0; alpha < img.cols; ++alpha)
             for (int beta = 0; beta < img.rows; ++beta)
-                if (votes.at<uchar>(alpha, beta, radius - radiusMin) > houghTH)
+                if (votes.at<uchar>(beta, alpha, radius - radiusMin) > houghTH)
                     circle(out, Point(alpha, beta), radius, Scalar(0), 2, 8);
 
     return out;
@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
     if (src.empty()) return -1;
 
-    int houghTH = 120;
+    int houghTH = 200;
     int radMin = 20;
     int radMax = 70;
     int cannyTHL = 40;

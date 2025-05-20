@@ -60,7 +60,7 @@ Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int can
                         if (alpha >= 0 and alpha < img.cols and beta >= 0 and beta < img.rows)
 
                             // Incrementa il voto per questo centro e raggio
-                            votes.at<uchar>(alpha, beta, radius - radiusMin)++;
+                            votes.at<uchar>(beta, alpha, radius - radiusMin)++;
                     }
 
     // Passo 4: Disegna i cerchi rilevati sull'immagine originale
@@ -74,7 +74,7 @@ Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int can
             for (int beta = 0; beta < img.rows; ++beta)
 
                 // Se i voti superano la soglia, abbiamo trovato un cerchio
-                if (votes.at<uchar>(alpha, beta, radius - radiusMin) > houghTH)
+                    if (votes.at<uchar>(beta, alpha, radius - radiusMin) > houghTH)
 
                     // Disegna il cerchio con il raggio e centro rilevati
                     circle(out, Point(alpha, beta), radius, Scalar(0), 2, 8);
