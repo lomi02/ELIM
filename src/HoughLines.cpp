@@ -8,20 +8,19 @@ Mat hough_lines(Mat & input, int houghTH, int cannyTHL, int cannyTHH, int blurSi
     Canny(img, img, cannyTHL, cannyTHH);
 
     int diagonalLength = cvRound(hypot(img.rows, img.cols));
-    int maxTheta = 180;
-    Mat votes = Mat::zeros(diagonalLength * 2, maxTheta, CV_8U);
+    Mat votes = Mat::zeros(diagonalLength * 2, 180, CV_8U);
 
     for (int y = 0; y < img.rows; ++y)
         for (int x = 0; x < img.cols; ++x)
             if (img.at<uchar>(Point(x, y)) == 255)
-                for (int thetaDeg = 0; thetaDeg < maxTheta; ++thetaDeg) {
+                for (int thetaDeg = 0; thetaDeg < 180; ++thetaDeg) {
                     double theta = thetaDeg * CV_PI / 180.0;
                     int rho = cvRound(x * cos(theta) + y * sin(theta));
                     int rhoIndex = rho + diagonalLength;
                     votes.at<uchar>(rhoIndex, thetaDeg)++;
                 }
 
-    Mat lineImg = input.clone();
+    Mat out = input.clone();
     int lineLength = max(img.rows, img.cols);
 
     for (int rhoIndex = 0; rhoIndex < votes.rows; ++rhoIndex)
@@ -34,14 +33,14 @@ Mat hough_lines(Mat & input, int houghTH, int cannyTHL, int cannyTHH, int blurSi
                 double x0 = a * rho, y0 = b * rho;
 
                 Point point1, point2;
-                point1.x = cvRound(x0 + lineLength * (-b));
-                point1.y = cvRound(y0 + lineLength * (a));
-                point2.x = cvRound(x0 - lineLength * (-b));
-                point2.y = cvRound(y0 - lineLength * (a));
+                point1.x = cvRound(x0 + lineLength * -b);
+                point1.y = cvRound(y0 + lineLength * a);
+                point2.x = cvRound(x0 - lineLength * -b);
+                point2.y = cvRound(y0 - lineLength * a);
 
-                line(lineImg, point1, point2, Scalar(0), 2);
+                line(out, point1, point2, Scalar(0), 2);
             }
-    return lineImg;
+    return out;
 }
 
 int main(int argc, char **argv) {

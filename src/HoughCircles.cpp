@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
     if (src.empty()) return -1;
 
-    int houghTH = 190;
+    int houghTH = 120;
     int radMin = 20;
     int radMax = 70;
     int cannyTHL = 40;

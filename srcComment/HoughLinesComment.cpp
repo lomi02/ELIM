@@ -34,10 +34,9 @@ Mat hough_lines(Mat &input, int houghTH, int cannyTHL, int cannyTHH, int blurSiz
     // Passo 3: Calcolo della Trasformata di Hough per rilevare le linee
     // Calcoliamo la lunghezza diagonale dell'immagine per dimensionare lo spazio di Hough
     int diagonalLength = cvRound(hypot(img.rows, img.cols));
-    int maxTheta = 180; // Angolo massimo (180 gradi)
 
     // Matrice dei voti (accumulatore): righe=rho, colonne=theta
-    Mat votes = Mat::zeros(diagonalLength * 2, maxTheta, CV_8U);
+    Mat votes = Mat::zeros(diagonalLength * 2, 180, CV_8U);
 
     // Per ogni pixel dell'immagine...
     for (int y = 0; y < img.rows; ++y)
@@ -47,7 +46,7 @@ Mat hough_lines(Mat &input, int houghTH, int cannyTHL, int cannyTHH, int blurSiz
             if (img.at<uchar>(Point(x, y)) == 255)
 
                 // Per ogni possibile angolo theta...
-                for (int theta = 0; theta < maxTheta; ++theta) {
+                for (int theta = 0; theta < 180; ++theta) {
 
                     // Calcola rho (distanza dall'origine) e aggiungi un voto
                     int rho = cvRound(x * cos(theta) + y * sin(theta));
@@ -56,7 +55,7 @@ Mat hough_lines(Mat &input, int houghTH, int cannyTHL, int cannyTHH, int blurSiz
                 }
 
     // Passo 4: Disegna le linee rilevate sull'immagine originale
-    Mat lineImg = input.clone();
+    Mat out = input.clone();
     int lineLength = max(img.rows, img.cols);   // Offset per estendere le linee
 
     // Itera su tutti i possibili valori di rho e theta
@@ -73,16 +72,16 @@ Mat hough_lines(Mat &input, int houghTH, int cannyTHL, int cannyTHH, int blurSiz
 
                 // Primo punto della linea
                 Point point1;
-                point1.x = cvRound(x0 + lineLength * (-b));
-                point1.y = cvRound(y0 + lineLength * (a));
+                point1.x = cvRound(x0 + lineLength * -b);
+                point1.y = cvRound(y0 + lineLength * a);
 
                 // Secondo punto della linea
                 Point point2;
-                point2.x = cvRound(x0 - lineLength * (-b));
-                point2.y = cvRound(y0 - lineLength * (a));
+                point2.x = cvRound(x0 - lineLength * -b);
+                point2.y = cvRound(y0 - lineLength * a);
 
                 // Disegna la linea sull'immagine
-                line(lineImg, point1, point2, Scalar(0), 2, 0);
+                line(out, point1, point2, Scalar(0), 2, 0);
             }
-    return lineImg;
+    return out;
 }
