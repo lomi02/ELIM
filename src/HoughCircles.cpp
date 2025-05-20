@@ -2,7 +2,7 @@
 using namespace cv;
 using namespace std;
 
-Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int cannyTHL, int cannyTHH, int blurSize = 3, float blurSigma = 0.5) {
+Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int cannyTHL, int cannyTHH, int blurSize, float blurSigma) {
     Mat img = input.clone();
     GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma);
     Canny(img, img, cannyTHL, cannyTHH);

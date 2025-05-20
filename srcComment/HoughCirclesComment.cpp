@@ -22,7 +22,7 @@ using namespace std;
  *
  * @return Immagine con i cerchi rilevati disegnati
  */
-Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int cannyTHL, int cannyTHH, int blurSize = 3, float blurSigma = 0.5) {
+Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int cannyTHL, int cannyTHH, int blurSize, float blurSigma) {
     Mat img = input.clone();
 
     // Passo 1: Applicazione dello sfocamento gaussiano per ridurre il rumore
