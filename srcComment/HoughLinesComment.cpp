@@ -25,7 +25,7 @@ Mat hough_lines(Mat &input, int houghTH, int cannyTHL, int cannyTHH, int blurSiz
 
     // Passo 1: Applicazione dello sfocamento gaussiano per ridurre il rumore
     // Lo smoothing è fondamentale per migliorare il rilevamento dei bordi successivo
-    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma);
+    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma, blurSigma);
 
     // Passo 2: Rilevamento dei bordi con l'algoritmo di Canny
     // Canny trova i bordi significativi usando le due soglie (bassa e alta)
@@ -39,17 +39,18 @@ Mat hough_lines(Mat &input, int houghTH, int cannyTHL, int cannyTHH, int blurSiz
     Mat votes = Mat::zeros(diagonalLength * 2, 180, CV_8U);
 
     // Per ogni pixel dell'immagine...
-    for (int y = 0; y < img.rows; ++y)
-        for (int x = 0; x < img.cols; ++x)
+    for (int x = 0; x < img.rows; x++)
+        for (int y = 0; y < img.cols; y++)
 
             // Se è un pixel di bordo (valore 255)...
-            if (img.at<uchar>(Point(x, y)) == 255)
+                if (img.at<uchar>(x, y) == 255)
 
                 // Per ogni possibile angolo theta...
-                for (int theta = 0; theta < 180; ++theta) {
+                for (int theta = 0; theta < 180; theta++) {
 
                     // Calcola rho (distanza dall'origine) e aggiungi un voto
-                    int rho = cvRound(x * cos(theta) + y * sin(theta));
+                    double thetaRad = theta * CV_PI / 180.0;
+                    int rho = cvRound(x * sin(thetaRad) + y * cos(thetaRad));
                     int rhoIndex = rho + diagonalLength;    // Spostamento per evitare indici negativi
                     votes.at<uchar>(rhoIndex, theta)++;
                 }
@@ -59,15 +60,16 @@ Mat hough_lines(Mat &input, int houghTH, int cannyTHL, int cannyTHH, int blurSiz
     int lineLength = max(img.rows, img.cols);   // Offset per estendere le linee
 
     // Itera su tutti i possibili valori di rho e theta
-    for (int rhoIndex = 0; rhoIndex < votes.rows; ++rhoIndex)
-        for (int theta = 0; theta < votes.cols; ++theta)
+    for (int rhoIndex = 0; rhoIndex < votes.rows; rhoIndex++)
+        for (int theta = 0; theta < votes.cols; theta++)
 
             // Se i voti superano la soglia, abbiamo trovato una linea
             if (votes.at<uchar>(rhoIndex, theta) > houghTH) {
                 int rho = rhoIndex - diagonalLength;    // Ripristina il valore originale di rho
+                double thetaRad = theta * CV_PI / 180.0;
 
                 // Calcola le coordinate di due punti per disegnare la linea
-                double a = cos(theta), b = sin(theta);
+                double a = cos(thetaRad), b = sin(thetaRad);
                 double x0 = a * rho, y0 = b * rho;
 
                 // Primo punto della linea
@@ -83,5 +85,6 @@ Mat hough_lines(Mat &input, int houghTH, int cannyTHL, int cannyTHH, int blurSiz
                 // Disegna la linea sull'immagine
                 line(out, point1, point2, Scalar(0), 2, 0);
             }
+
     return out;
 }
