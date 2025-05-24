@@ -35,21 +35,21 @@ Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int can
 
     // Passo 3: Calcolo della Trasformata di Hough per rilevare i cerchi
     int radiusOffset = radiusMax - radiusMin + 1;
-    int sizes[] = {img.cols, img.rows, radiusOffset};   // Dimensioni dell'accumulatore 3D
+    int sizes[] = {img.rows, img.cols, radiusOffset};   // Dimensioni dell'accumulatore 3D
     auto votes = Mat(3, sizes, CV_8U, Scalar(0));       // Matrice dei voti (accumulatore)
 
     // Per ogni pixel dell'immagine...
-    for (int y = 0; y < img.rows; ++y)
-        for (int x = 0; x < img.cols; ++x)
+    for (int x = 0; x < img.rows; x++)
+        for (int y = 0; y < img.cols; y++)
 
             // Se è un pixel di bordo (valore 255)...
-            if (img.at<uchar>(Point(x, y)) == 255)
+                if (img.at<uchar>(x, y) == 255)
 
                 // Per ogni possibile raggio nel range specificato...
-                for (int radius = radiusMin; radius < radiusMax; ++radius)
+                    for (int radius = radiusMin; radius < radiusMax; radius++)
 
                     // Per ogni possibile angolo theta (0-360 gradi)...
-                    for (int thetaDegrees = 0; thetaDegrees < 360; ++thetaDegrees) {
+                    for (int thetaDegrees = 0; thetaDegrees < 360; thetaDegrees++) {
                         double thetaRadians = thetaDegrees * CV_PI / 180;   // Conversione in radianti
 
                         // Calcola le coordinate del centro (alpha, beta) del cerchio potenziale
@@ -57,27 +57,27 @@ Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int can
                         int beta = cvRound(y - radius * sin(thetaRadians));
 
                         // Verifica che il centro sia dentro i bordi dell'immagine
-                        if (alpha >= 0 and alpha < img.cols and beta >= 0 and beta < img.rows)
+                        if (alpha >= 0 && alpha < img.rows && beta >= 0 && beta < img.cols)
 
                             // Incrementa il voto per questo centro e raggio
-                            votes.at<uchar>(beta, alpha, radius - radiusMin)++;
+                            votes.at<uchar>(alpha, beta, radius - radiusMin)++;
                     }
 
     // Passo 4: Disegna i cerchi rilevati sull'immagine originale
     Mat out = input.clone();
 
     // Itera su tutti i possibili raggi...
-    for (int radius = radiusMin; radius < radiusMax; ++radius)
+    for (int radius = radiusMin; radius < radiusMax; radius++)
 
         // Itera su tutte le possibili coordinate del centro...
-        for (int alpha = 0; alpha < img.cols; ++alpha)
-            for (int beta = 0; beta < img.rows; ++beta)
+        for (int alpha = 0; alpha < img.rows; alpha++)
+            for (int beta = 0; beta < img.cols; beta++)
 
                 // Se i voti superano la soglia, abbiamo trovato un cerchio
-                    if (votes.at<uchar>(beta, alpha, radius - radiusMin) > houghTH)
+                if (votes.at<uchar>(alpha, beta, radius - radiusMin) > houghTH)
 
                     // Disegna il cerchio con il raggio e centro rilevati
-                    circle(out, Point(alpha, beta), radius, Scalar(0), 2, 8);
+                    circle(out, Point(beta, alpha), radius, Scalar(0), 2, 8);
 
     return out;
 }
