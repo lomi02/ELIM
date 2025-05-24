@@ -26,10 +26,10 @@ Mat harris(Mat &input, float k, int threshTH, int blurSize, float blurSigma) {
     threshold(R, R, threshTH, 255, THRESH_BINARY);
 
     Mat out = input.clone();
-    for (int y = 0; y < R.rows; y++)
-        for (int x = 0; x < R.cols; x++)
-            if (R.at<uchar>(y, x) > 0)
-                circle(out, Point(x, y), 3, Scalar(0), 1, 8, 0);
+    for (int x = 0; x < R.rows; x++)
+        for (int y = 0; y < R.cols; y++)
+            if (R.at<uchar>(x, y) > 0)
+                circle(out, Point(y, x), 3 , Scalar(0), 1, 8, 0);
 
     return out;
 }

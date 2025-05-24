@@ -22,7 +22,7 @@ using namespace cv;
  *
  * @return Immagine con gli angoli rilevati marcati da cerchi
  */
-Mat harris(Mat &input, float , int threshTH, int blurSize, float blurSigma) {
+Mat harris(Mat &input, float k, int threshTH, int blurSize, float blurSigma) {
     Mat img = input.clone();
 
     // Passo 1: Calcolo delle derivate spaziali usando Sobel
@@ -68,12 +68,12 @@ Mat harris(Mat &input, float , int threshTH, int blurSize, float blurSigma) {
 
     // Passo 7: Disegno dei cerchi nelle posizioni degli angoli rilevati
     Mat out = input.clone();
-    for (int y = 0; y < R.rows; y++)
-        for (int x = 0; x < R.cols; x++)
-            if (R.at<uchar>(y, x) > 0)  // Se è un angolo
+    for (int x = 0; x < R.rows; x++)
+        for (int y = 0; y < R.cols; y++)
+            if (R.at<uchar>(x, y) > 0)  // Se è un angolo
 
                 // Disegna un cerchio nero di raggio 3 pixel
-                circle(out, Point(x, y), 3, Scalar(0), 1, 8, 0);
+                circle(out, Point(y, x), 3 , Scalar(0), 1, 8, 0);
 
     return out;
 }
