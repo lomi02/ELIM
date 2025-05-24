@@ -97,13 +97,13 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize, float blurSigma)
     Mat edges = Mat::zeros(NMS.size(), CV_8U);
 
     // Scansione completa dell'immagine
-    for (int x = 0; x < NMS.cols; x++)
-        for (int y = 0; y < NMS.rows; y++) {
-            uchar val = NMS.at<uchar>(y, x);
+    for (int x = 0; x < NMS.rows; x++)
+        for (int y = 0; y < NMS.cols; y++) {
+            uchar val = NMS.at<uchar>(x, y);
 
             // Se il pixel supera la soglia alta, è un bordo forte
             if (val >= cannyTHH) {
-                edges.at<uchar>(y, x) = 255;
+                edges.at<uchar>(x, y) = 255;
 
                 // Analisi dell'intorno 3x3 per trovare bordi deboli collegati
                 for (int dx = -1; dx <= 1; dx++)
@@ -111,10 +111,10 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize, float blurSigma)
                         int nx = x + dx, ny = y + dy;
 
                         // Verifica che il pixel sia dentro i bordi e nella soglia debole
-                        if (nx >= 0 && nx < NMS.cols && ny >= 0 && ny < NMS.rows &&
-                            NMS.at<uchar>(ny, nx) >= cannyTHL) {
-                            edges.at<uchar>(ny, nx) = 255;
-                        }
+                        if (nx >= 0 && nx < NMS.rows && ny >= 0 && ny < NMS.cols &&
+                            NMS.at<uchar>(nx, ny) >= cannyTHL) {
+                            edges.at<uchar>(nx, ny) = 255;
+                            }
                     }
             }
         }

@@ -14,8 +14,8 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize, float blurSigma)
     pow(x_gradient, 2, x_gradient2);
     pow(y_gradient, 2, y_gradient2);
     sqrt(x_gradient2 + y_gradient2, magnitude);
-    normalize(magnitude, magnitude, 0, 255, NORM_MINMAX, CV_8U);
 
+    normalize(magnitude, magnitude, 0, 255, NORM_MINMAX, CV_8U);
     Mat phase;
     cv::phase(x_gradient, y_gradient, phase);
 
@@ -25,19 +25,25 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize, float blurSigma)
             float angle = phase.at<float>(x, y);
             angle = fmod(angle + 22.5, 180);
 
-            uchar pixel1, pixel2;
             uchar curr = magnitude.at<uchar>(x, y);
+            uchar pixel1, pixel2;
 
             if (angle < 45) {
                 pixel1 = magnitude.at<uchar>(x + 1, y);
                 pixel2 = magnitude.at<uchar>(x - 1, y);
-            } else if (angle < 90) {
+            }
+
+            else if (angle < 90) {
                 pixel1 = magnitude.at<uchar>(x + 1, y - 1);
                 pixel2 = magnitude.at<uchar>(x - 1, y + 1);
-            } else if (angle < 135) {
+            }
+
+            else if (angle < 135) {
                 pixel1 = magnitude.at<uchar>(x, y + 1);
                 pixel2 = magnitude.at<uchar>(x, y - 1);
-            } else {
+            }
+
+            else {
                 pixel1 = magnitude.at<uchar>(x + 1, y + 1);
                 pixel2 = magnitude.at<uchar>(x - 1, y - 1);
             }
@@ -47,17 +53,18 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize, float blurSigma)
         }
 
     Mat edges = Mat::zeros(NMS.size(), CV_8U);
-    for (int x = 0; x < NMS.cols; x++)
-        for (int y = 0; y < NMS.rows; y++) {
-            uchar val = NMS.at<uchar>(y, x);
+    for (int x = 0; x < NMS.rows; x++)
+        for (int y = 0; y < NMS.cols; y++) {
+            uchar val = NMS.at<uchar>(x, y);
             if (val >= cannyTHH) {
-                edges.at<uchar>(y, x) = 255;
+                edges.at<uchar>(x, y) = 255;
                 for (int dx = -1; dx <= 1; dx++)
                     for (int dy = -1; dy <= 1; dy++) {
                         int nx = x + dx, ny = y + dy;
-                        if (nx >= 0 && nx < NMS.cols && ny >= 0 && ny < NMS.rows &&
-                            NMS.at<uchar>(ny, nx) >= cannyTHL) {
-                            edges.at<uchar>(ny, nx) = 255;
+
+                        if (nx >= 0 && nx < NMS.rows && ny >= 0 && ny < NMS.cols &&
+                            NMS.at<uchar>(nx, ny) >= cannyTHL) {
+                            edges.at<uchar>(nx, ny) = 255;
                         }
                     }
             }
