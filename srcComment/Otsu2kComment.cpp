@@ -22,23 +22,23 @@ using namespace cv;
  *
  * @return Immagine binaria con pixel separati in sfondo, oggetto e primo piano
  */
-Mat otsu2k(Mat &input, int blurSize = 3, float blurSigma = 0.5) {
+Mat otsu2k(Mat &input, int blurSize, float blurSigma) {
     Mat img = input.clone();
 
     // Passo 1: Calcolo dell'istogramma normalizzato dell'immagine
     vector histogram(256, 0.0);
-    for (int y = 0; y < img.rows; ++y)
-        for (int x = 0; x < img.cols; ++x)
-            histogram.at(img.at<uchar>(Point(x, y)))++;     // Incrementa il bin corrispondente al valore del pixel
+    for (int x = 0; x < img.rows; x++)
+        for (int y = 0; y < img.cols; y++)
+            histogram.at(img.at<uchar>(x, y))++;    // Incrementa il bin corrispondente al valore del pixel
 
     // Normalizzazione dell'istogramma
-    int numberOfPixels = img.rows * img.cols;
-    for (double & bin : histogram)
-        bin /= numberOfPixels;      // Converti in probabilità dividendo per il numero totale di pixel
+    int numPixels = img.rows * img.cols;
+    for (double &bin: histogram)
+        bin /= numPixels;   // Converti in probabilità dividendo per il numero totale di pixel
 
     // Passo 2: Calcolo della media cumulativa globale (mg)
     double globalCumulativeMean = 0.0;
-    for (int i = 0; i < histogram.size(); ++i)
+    for (int i = 0; i < histogram.size(); i++)
         globalCumulativeMean += i * histogram.at(i);    // Somma ponderata dei valori di intensità
 
     // Inizializzazione variabili per il calcolo delle soglie ottimali
@@ -48,36 +48,35 @@ Mat otsu2k(Mat &input, int blurSize = 3, float blurSigma = 0.5) {
     vector optimalTH(2, 0);             // Soglie ottimali (k1, k2)
 
     // Passo 3: Ricerca iterativa delle soglie ottimali
-    for (int k1 = 0; k1 < histogram.size() - 2; ++k1) {
+    for (int k1 = 0; k1 < histogram.size() - 2; k1++) {
 
         // Aggiorna probabilità e media cumulativa per la prima classe (sfondo)
         probabilities.at(0) += histogram.at(k1);
         cumulativeMeans.at(0) += k1 * histogram.at(k1);
 
-        for (int k2 = k1 + 1; k2 < histogram.size() - 1; ++k2) {
+        for (int k2 = k1 + 1; k2 < histogram.size(); k2++) {
 
             // Aggiorna probabilità e media cumulativa per la seconda classe (medio-piano)
             probabilities.at(1) += histogram.at(k2);
             cumulativeMeans.at(1) += k2 * histogram.at(k2);
 
-            for (int k = k2 + 1; k < histogram.size(); ++k) {
+            for (int k3 = k2 + 1; k3 < histogram.size(); k3++) {
 
                 // Aggiorna probabilità e media cumulativa per la terza classe (primo piano)
-                probabilities.at(2) += histogram.at(k);
-                cumulativeMeans.at(2) += k * histogram.at(k);
+                probabilities.at(2) += histogram.at(k3);
+                cumulativeMeans.at(2) += k3 * histogram.at(k3);
 
                 // Calcolo della varianza tra classi (criterio di Otsu)
-                double betweenClassesVariance = 0.0;
-                for (int i = 0; i < 3; ++i) {
+                double betweenClassVariance = 0.0;
+                for (int i = 0; i < 3; i++)
                     if (probabilities.at(i) > 0) {
                         double currentCumulativeMean = cumulativeMeans.at(i) / probabilities.at(i);
-                        betweenClassesVariance += probabilities.at(i) * pow(currentCumulativeMean - globalCumulativeMean, 2);
+                        betweenClassVariance += probabilities.at(i) * pow(currentCumulativeMean - globalCumulativeMean, 2);
                     }
-                }
 
                 // Aggiornamento delle soglie ottimali se si trova una varianza maggiore
-                if (betweenClassesVariance > maxVariance) {
-                    maxVariance = betweenClassesVariance;
+                if (betweenClassVariance > maxVariance) {
+                    maxVariance = betweenClassVariance;
                     optimalTH.at(0) = k1;
                     optimalTH.at(1) = k2;
                 }
@@ -95,16 +94,16 @@ Mat otsu2k(Mat &input, int blurSize = 3, float blurSigma = 0.5) {
     GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma, blurSigma);
 
     // Passo 5: Sogliatura dell'immagine usando le due soglie ottimali
-    Mat thresholdedImg = Mat::zeros(img.rows, img.cols, CV_8U);
-    for (int x = 0; x < img.rows; ++x) {
-        for (int y = 0; y < img.cols; ++y) {
+    Mat out = Mat::zeros(img.rows, img.cols, CV_8U);
+    for (int x = 0; x < img.rows; x++)
+        for (int y = 0; y < img.cols; y++) {
             uchar pixel = img.at<uchar>(x, y);
             if (pixel >= optimalTH.at(1))
-                thresholdedImg.at<uchar>(x, y) = 255;   // Primo piano (bianco)
+                out.at<uchar>(x, y) = 255;      // Primo piano (bianco)
             else if (pixel >= optimalTH.at(0))
-                thresholdedImg.at<uchar>(x, y) = 128;   // Medio-piano (grigio)
+                out.at<uchar>(x, y) = 127;      // Medio-piano (grigio)
             // Sfondo rimane nero (0)
         }
-    }
-    return thresholdedImg;
+
+    return out;
 }
