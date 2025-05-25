@@ -2,35 +2,41 @@
 using namespace std;
 using namespace cv;
 
-bool inRange(Mat &img, Point neigh) {
-    return neigh.x >= 0 and neigh.x < img.cols and neigh.y >= 0 and neigh.y < img.rows;
+bool inRange(const Mat &img, Point neigh) {
+    return neigh.x >= 0 && neigh.x < img.cols
+           && neigh.y >= 0 && neigh.y < img.rows;
 }
 
-bool isSimilar(Mat &img, Point seed, Point neigh, int similTH) {
-    int seedIntensity = img.at<uchar>(seed);
-    int currIntensity = img.at<uchar>(neigh);
-    return abs(seedIntensity - currIntensity) < similTH;
+bool isSimilar(const Mat &img, Point p1, Point p2, int similTH) {
+    return abs(img.at<uchar>(p1) - img.at<uchar>(p2)) <= similTH;
 }
 
-Mat region_growing(Mat &input, int similTH, Point seed = Point(0, 0)) {
+Mat region_growing(const Mat &input, int similTH, Point seed) {
     Mat img = input.clone();
-
     Mat out = Mat::zeros(img.size(), CV_8U);
+
+    Mat visited = Mat::zeros(input.size(), CV_8U);
     queue<Point> pixelQueue;
     pixelQueue.push(seed);
+    visited.at<uchar>(seed) = 1;
+
+    Point neighbors[] = {
+        Point(0, -1), Point(-1, 0),
+        Point(1, 0),  Point(0, 1)
+    };
+
     while (!pixelQueue.empty()) {
         Point currentPx = pixelQueue.front();
         pixelQueue.pop();
+        out.at<uchar>(currentPx) = 255;
 
-        if (out.at<uchar>(currentPx) == 0) {
-            out.at<uchar>(currentPx) = 255;
-
-            Rect roi(currentPx.x - 1, currentPx.y - 1, 3, 3);
-            for (int roi_x = roi.x; roi_x < roi.x + roi.height; ++roi_x)
-                for (int roi_y = roi.y; roi_y < roi.y + roi.width; ++roi_y) {
-                    Point neighPx(roi_x, roi_y);
-                    if (inRange(img, neighPx) and isSimilar(img, seed, neighPx, similTH))
-                        pixelQueue.push(neighPx);
+        for (const Point &offset: neighbors) {
+            Point neighPx = currentPx + offset;
+            if (inRange(input, neighPx) &&
+                visited.at<uchar>(neighPx) == 0 &&
+                isSimilar(input, currentPx, neighPx, similTH)) {
+                visited.at<uchar>(neighPx) = 1;
+                pixelQueue.push(neighPx);
                 }
         }
     }
@@ -45,10 +51,8 @@ int main(int argc, char **argv) {
     //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
     if (src.empty()) return -1;
 
-    int seedx = 20;
-    int seedy = 40;
-    Point seed(seedx, seedy);
-    int similTH = 50;
+    Point seed(src.cols / 2, src.rows / 2);
+    int similTH = 10;
 
     Mat dst = region_growing(src, similTH, seed);
 
