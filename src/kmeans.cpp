@@ -2,60 +2,62 @@
 using namespace std;
 using namespace cv;
 
-Mat kmeans_gray(Mat &input, int numberOfCluster, int maxIterations, double deltaTH) {
+Mat kmeans(Mat &input, int k, int maxIterations, double deltaTH) {
     Mat img = input.clone();
 
-    srand(time(nullptr) + 1);
-    vector<uchar> centres(numberOfCluster);
-    for (int i = 0; i < numberOfCluster; i++) {
-        int x = rand() % img.rows;
-        int y = rand() % img.cols;
+    vector<uchar> pixels;
+    for (int i = 0; i < input.rows; i++)
+        for (int j = 0; j < input.cols; j++)
+            pixels.push_back(img.at<uchar>(i, j));
 
-        centres.at(i) = img.at<uchar>(x, y);
-    }
+    vector<uchar> centroids(k);
+    for (int i = 0; i < k; i++)
+        centroids[i] = pixels[rand() % pixels.size()];
 
+    vector<int> labels(pixels.size());
+    bool centroidsChanged = true;
     int iterations = 0;
-    int closestIndex = 0;
-    bool isCentreUpdated = true;
 
-    vector<vector<Point> > clusters(numberOfCluster);
-    Mat out = input.clone();
-    while (isCentreUpdated && iterations < maxIterations) {
-        isCentreUpdated = false;
-        for (int i = 0; i < numberOfCluster; i++)
-            clusters.at(i).clear();
+    while (centroidsChanged && iterations < maxIterations) {
+        centroidsChanged = false;
 
-        for (int x = 0; x < img.rows; x++)
-            for (int y = 0; y < img.cols; y++) {
-                int minDistance = INT_MAX;
-                for (int i = 0; i < numberOfCluster; i++) {
-                    int currentDistance = abs(centres.at(i) - img.at<uchar>(x, y));
-                    if (currentDistance < minDistance) {
-                        minDistance = currentDistance;
-                        closestIndex = i;
-                    }
-                }
-                clusters.at(closestIndex).emplace_back(x, y);
-                out.at<uchar>(x, y) = centres.at(closestIndex);
-            }
+        for (int i = 0; i < pixels.size(); i++) {
+            int minDist = INT_MAX, nearestCluster = 0;
 
-        for (int i = 0; i < numberOfCluster; i++)
-            if (!clusters.at(i).empty()) {
-                int intensitySum = 0;
+            for (int cluster = 0; cluster < k; cluster++) {
+                int dist = abs(pixels[i] - centroids[cluster]);
 
-                for (auto &point: clusters.at(i))
-                    intensitySum += img.at<uchar>(point);
-
-                double currentMean = intensitySum / clusters.at(i).size();
-                int delta = cvRound(abs(currentMean - centres.at(i)));
-
-                if (delta > deltaTH) {
-                    centres.at(i) = cvRound(currentMean);
-                    isCentreUpdated = true;
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearestCluster = cluster;
                 }
             }
+            labels[i] = nearestCluster;
+        }
+
+        for (int cluster = 0; cluster < k; cluster++) {
+            double sum = 0, count = 0;
+            for (int i = 0; i < pixels.size(); i++) {
+                if (labels[i] == cluster) {
+                    sum += pixels[i];
+                    count++;
+                }
+            }
+            if (count > 0) {
+                double newCenter = sum / count;
+                if (abs(newCenter - centroids[cluster]) > deltaTH) {
+                    centroids[cluster] = newCenter;
+                    centroidsChanged = true;
+                }
+            }
+        }
         iterations++;
     }
+
+    Mat out(img.size(), CV_8U);
+    for (int i = 0; i < img.rows; i++)
+        for (int j = 0; j < img.cols; j++)
+            out.at<uchar>(i, j) = centroids[labels[i * img.cols + j]];
 
     return out;
 }
@@ -71,7 +73,7 @@ int main(int argc, char **argv) {
     int maxIterations = 30;
     double deltaTH = 1;
 
-    Mat dst = kmeans_gray(src, k, maxIterations, deltaTH);
+    Mat dst = kmeans(src, k, maxIterations, deltaTH);
 
     imshow("K-means", dst);
     waitKey(0);
