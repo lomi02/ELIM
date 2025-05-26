@@ -9,11 +9,11 @@ using namespace cv;
  * sfondo, medio-piano e primo piano, trovando due valori di soglia ottimali.
  *
  * La funzione esegue questi passaggi:
- * 1. Calcola l'istogramma normalizzato dell'immagine
- * 2. Calcola la media cumulativa globale
- * 3. Calcola iterativamente le probabilità e medie cumulative per diverse combinazioni
+ * 1. Applica uno sfocatura gaussiana per ridurre il rumore
+ * 2. Calcola l'istogramma normalizzato dell'immagine
+ * 3. Calcola la media cumulativa globale
+ * 4. Calcola iterativamente le probabilità e medie cumulative per diverse combinazioni
  *    di soglia, massimizzando la varianza tra le classi
- * 4. Applica uno sfocatura gaussiana per ridurre il rumore
  * 5. Sogliatura l'immagine sfocata usando i due valori di soglia ottimali
  *
  * @param input     Immagine in input (scala di grigi)
@@ -22,86 +22,85 @@ using namespace cv;
  *
  * @return Immagine binaria con pixel separati in sfondo, oggetto e primo piano
  */
-Mat otsu2k(Mat &input, int blurSize, float blurSigma) {
-    Mat img = input.clone();
+Mat otsu2k(const Mat &input, int blurSize, float blurSigma) {
 
-    // Passo 1: Calcolo dell'istogramma normalizzato dell'immagine
+    // Passo 1: Applicazione dello sfocamento gaussiano per ridurre il rumore
+    Mat img = input.clone();
+    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma);
+
+    // Passo 2: Calcolo dell'istogramma normalizzato dell'immagine
     vector histogram(256, 0.0);
-    for (int x = 0; x < img.rows; x++)
-        for (int y = 0; y < img.cols; y++)
-            histogram.at(img.at<uchar>(x, y))++;    // Incrementa il bin corrispondente al valore del pixel
+    for (int i = 0; i < img.rows; i++)
+        for (int j = 0; j < img.cols; j++)
+            histogram[img.at<uchar>(i, j)]++;
 
     // Normalizzazione dell'istogramma
-    int numPixels = img.rows * img.cols;
-    for (double &bin: histogram)
-        bin /= numPixels;   // Converti in probabilità dividendo per il numero totale di pixel
+    double totalPixels = img.rows * img.cols;
+    for (auto &histValue: histogram)
+        histValue /= totalPixels;
 
-    // Passo 2: Calcolo della media cumulativa globale (mg)
-    double globalCumulativeMean = 0.0;
-    for (int i = 0; i < histogram.size(); i++)
-        globalCumulativeMean += i * histogram.at(i);    // Somma ponderata dei valori di intensità
+    // Passo 3: Calcolo della media cumulativa globale (mg)
+    double globalMean = 0.0;
+    for (int i = 0; i < 256; i++)
+        globalMean += i * histogram[i];
 
     // Inizializzazione variabili per il calcolo delle soglie ottimali
-    vector probabilities(3, 0.0);       // Probabilità delle tre classi (P0, P1, P2)
-    vector cumulativeMeans(3, 0.0);     // Medie cumulative (m0, m1, m2)
-    double maxVariance = 0.0;           // Massima varianza tra classi trovata
-    vector optimalTH(2, 0);             // Soglie ottimali (k1, k2)
+    double maxVar = 0.0;        // Massima varianza tra classi trovata
+    vector optimalTH = {0, 0};  // Soglie ottimali (k1, k2)
 
-    // Passo 3: Ricerca iterativa delle soglie ottimali
-    for (int k1 = 0; k1 < histogram.size() - 2; k1++) {
+    // Variabili temporanee per il calcolo
+    double w0, w1, w2, m0, m1, m2, variance;
 
-        // Aggiorna probabilità e media cumulativa per la prima classe (sfondo)
-        probabilities.at(0) += histogram.at(k1);
-        cumulativeMeans.at(0) += k1 * histogram.at(k1);
+    // Passo 4: Ricerca iterativa delle soglie ottimali
+    for (int k1 = 1; k1 < 256 - 2; k1++) {
+        w0 = m0 = 0.0;
 
-        for (int k2 = k1 + 1; k2 < histogram.size(); k2++) {
-
-            // Aggiorna probabilità e media cumulativa per la seconda classe (medio-piano)
-            probabilities.at(1) += histogram.at(k2);
-            cumulativeMeans.at(1) += k2 * histogram.at(k2);
-
-            for (int k3 = k2 + 1; k3 < histogram.size(); k3++) {
-
-                // Aggiorna probabilità e media cumulativa per la terza classe (primo piano)
-                probabilities.at(2) += histogram.at(k3);
-                cumulativeMeans.at(2) += k3 * histogram.at(k3);
-
-                // Calcolo della varianza tra classi (criterio di Otsu)
-                double betweenClassVariance = 0.0;
-                for (int i = 0; i < 3; i++)
-                    if (probabilities.at(i) > 0) {
-                        double currentCumulativeMean = cumulativeMeans.at(i) / probabilities.at(i);
-                        betweenClassVariance += probabilities.at(i) * pow(currentCumulativeMean - globalCumulativeMean, 2);
-                    }
-
-                // Aggiornamento delle soglie ottimali se si trova una varianza maggiore
-                if (betweenClassVariance > maxVariance) {
-                    maxVariance = betweenClassVariance;
-                    optimalTH.at(0) = k1;
-                    optimalTH.at(1) = k2;
-                }
-            }
-            // Reset per la terza classe per la prossima iterazione
-            probabilities.at(2) = 0.0;
-            cumulativeMeans.at(2) = 0.0;
+        // Calcola probabilità e media per la prima classe (sfondo)
+        for (int i = 0; i <= k1; i++) {
+            w0 += histogram[i];
+            m0 += i * histogram[i];
         }
-        // Reset per la seconda classe per la prossima iterazione
-        probabilities.at(1) = 0.0;
-        cumulativeMeans.at(1) = 0.0;
+
+        for (int k2 = k1 + 1; k2 < 256 - 1; k2++) {
+            w1 = m1 = 0.0;
+
+            // Calcola probabilità e media per la seconda classe (medio-piano)
+            for (int i = k1 + 1; i <= k2; i++) {
+                w1 += histogram[i];
+                m1 += i * histogram[i];
+            }
+
+            // Calcola probabilità e media per la terza classe (primo piano)
+            w2 = 1.0 - w0 - w1;
+            m2 = globalMean - m0 - m1;
+
+            // Calcolo della varianza tra classi (criterio di Otsu)
+            variance = w0 * (m0 / w0 - globalMean) * (m0 / w0 - globalMean) +
+                       w1 * (m1 / w1 - globalMean) * (m1 / w1 - globalMean) +
+                       w2 * (m2 / w2 - globalMean) * (m2 / w2 - globalMean);
+
+            // Aggiornamento delle soglie ottimali se si trova una varianza maggiore
+            if (variance > maxVar) {
+                maxVar = variance;
+                optimalTH = {k1, k2};
+            }
+        }
     }
 
-    // Passo 4: Applicazione dello sfocamento gaussiano per ridurre il rumore
-    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma, blurSigma);
-
     // Passo 5: Sogliatura dell'immagine usando le due soglie ottimali
-    Mat out = Mat::zeros(img.rows, img.cols, CV_8U);
-    for (int x = 0; x < img.rows; x++)
-        for (int y = 0; y < img.cols; y++) {
-            uchar pixel = img.at<uchar>(x, y);
-            if (pixel >= optimalTH.at(1))
-                out.at<uchar>(x, y) = 255;      // Primo piano (bianco)
-            else if (pixel >= optimalTH.at(0))
-                out.at<uchar>(x, y) = 127;      // Medio-piano (grigio)
+    Mat out = Mat::zeros(img.size(), CV_8U);
+    for (int i = 0; i < img.rows; i++)
+        for (int j = 0; j < img.cols; j++) {
+            uchar val = img.at<uchar>(i, j);
+
+            // Primo piano (bianco)
+            if (val >= optimalTH[1])
+                out.at<uchar>(i, j) = 255;
+
+            // Medio-piano (grigio)
+            else if (val >= optimalTH[0])
+                out.at<uchar>(i, j) = 127;
+
             // Sfondo rimane nero (0)
         }
 

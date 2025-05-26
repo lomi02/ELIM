@@ -2,68 +2,63 @@
 using namespace std;
 using namespace cv;
 
-Mat otsu2k(Mat &input, int blurSize, int blurSigma) {
+Mat otsu2k(Mat &input, int blurSize, float blurSigma) {
     Mat img = input.clone();
+    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma);
 
     vector histogram(256, 0.0);
-    for (int x = 0; x < img.rows; x++)
-        for (int y = 0; y < img.cols; y++)
-            histogram.at(img.at<uchar>(x, y))++;
+    for (int i = 0; i < img.rows; i++)
+        for (int j = 0; j < img.cols; j++)
+            histogram[img.at<uchar>(i, j)]++;
 
-    int numPixels = img.rows * img.cols;
-    for (double &bin: histogram)
-        bin /= numPixels;
+    double totalPixels = img.rows * img.cols;
+    for (auto &histValue: histogram) histValue /= totalPixels;
 
-    double globalCumulativeMean = 0.0;
-    for (int i = 0; i < histogram.size(); i++)
-        globalCumulativeMean += i * histogram.at(i);
+    double globalMean = 0.0;
+    for (int i = 0; i < 256; i++)
+        globalMean += i * histogram[i];
 
-    vector probabilities(3, 0.0);
-    vector cumulativeMeans(3, 0.0);
-    double maxVariance = 0.0;
-    vector optimalTH(2, 0);
+    double maxVar = 0.0;
+    vector optimalTH = {0, 0};
 
-    for (int k1 = 0; k1 < histogram.size() - 2; k1++) {
-        probabilities.at(0) += histogram.at(k1);
-        cumulativeMeans.at(0) += k1 * histogram.at(k1);
+    double w0, w1, w2, m0, m1, m2, variance;
 
-        for (int k2 = k1 + 1; k2 < histogram.size(); k2++) {
-            probabilities.at(1) += histogram.at(k2);
-            cumulativeMeans.at(1) += k2 * histogram.at(k2);
-
-            for (int k3 = k2 + 1; k3 < histogram.size(); k3++) {
-                probabilities.at(2) += histogram.at(k3);
-                cumulativeMeans.at(2) += k3 * histogram.at(k3);
-
-                double betweenClassVariance = 0.0;
-                for (int i = 0; i < 3; i++)
-                    if (probabilities.at(i) > 0) {
-                        double currentCumulativeMean = cumulativeMeans.at(i) / probabilities.at(i);
-                        betweenClassVariance += probabilities.at(i) * pow(currentCumulativeMean - globalCumulativeMean, 2);
-                    }
-
-                if (betweenClassVariance > maxVariance) {
-                    maxVariance = betweenClassVariance;
-                    optimalTH.at(0) = k1;
-                    optimalTH.at(1) = k2;
-                }
-            }
-            probabilities.at(2) = 0.0;
-            cumulativeMeans.at(2) = 0.0;
+    for (int k1 = 1; k1 < 256 - 2; k1++) {
+        w0 = m0 = 0.0;
+        for (int i = 0; i <= k1; i++) {
+            w0 += histogram[i];
+            m0 += i * histogram[i];
         }
-        probabilities.at(1) = 0.0;
-        cumulativeMeans.at(1) = 0.0;
+
+        for (int k2 = k1 + 1; k2 < 256 - 1; k2++) {
+            w1 = m1 = 0.0;
+            for (int i = k1 + 1; i <= k2; i++) {
+                w1 += histogram[i];
+                m1 += i * histogram[i];
+            }
+
+            w2 = 1.0 - w0 - w1;
+            m2 = globalMean - m0 - m1;
+
+            variance = w0 * (m0 / w0 - globalMean) * (m0 / w0 - globalMean) +
+                       w1 * (m1 / w1 - globalMean) * (m1 / w1 - globalMean) +
+                       w2 * (m2 / w2 - globalMean) * (m2 / w2 - globalMean);
+
+            if (variance > maxVar) {
+                maxVar = variance;
+                optimalTH = {k1, k2};
+            }
+        }
     }
 
-    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma, blurSigma);
-    Mat out = Mat::zeros(img.rows, img.cols, CV_8U);
-    for (int x = 0; x < img.rows; x++)
-        for (int y = 0; y < img.cols; y++) {
-            uchar pixel = img.at<uchar>(x, y);
-            if (pixel >= optimalTH.at(1))
-                out.at<uchar>(x, y) = 255;
-            else if (pixel >= optimalTH.at(0))
-                out.at<uchar>(x, y) = 127;
+    Mat out = Mat::zeros(img.size(), CV_8U);
+    for (int i = 0; i < img.rows; i++)
+        for (int j = 0; j < img.cols; j++) {
+            uchar val = img.at<uchar>(i, j);
+            if (val >= optimalTH[1])
+                out.at<uchar>(i, j) = 255;
+            else if (val >= optimalTH[0])
+                out.at<uchar>(i, j) = 127;
         }
 
     return out;
