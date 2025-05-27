@@ -25,25 +25,25 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
     GaussianBlur(img, img, Size(3, 3), 0.5, 0.5);
 
     // Passo 2: Calcolo del gradiente
-    Mat x_gradient, y_gradient;
+    Mat Dx, Dy;
 
     // Calcolo delle derivate nelle direzioni x e y usando l'operatore di Sobel
     // CV_32F indica che il risultato è in floating point per maggiore precisione
-    Sobel(img, x_gradient, CV_32F, 1, 0);
-    Sobel(img, y_gradient, CV_32F, 0, 1);
+    Sobel(img, Dx, CV_32F, 1, 0);
+    Sobel(img, Dy, CV_32F, 0, 1);
 
     // Calcolo della magnitudo
-    Mat x_gradient2, y_gradient2, magnitude;
-    pow(x_gradient, 2, x_gradient2);
-    pow(y_gradient, 2, y_gradient2);
-    sqrt(x_gradient2 + y_gradient2, magnitude);
+    Mat Dx2, Dy2, magnitude;
+    pow(Dx, 2, Dx2);
+    pow(Dy, 2, Dy2);
+    sqrt(Dx2 + Dy2, magnitude);
 
     // Normalizzazione della magnitudo nell'intervallo 0-255
     normalize(magnitude, magnitude, 0, 255, NORM_MINMAX, CV_8U);
 
     // Calcolo della fase (direzione) del gradiente in gradi (0-360°)
     Mat phase;
-    cv::phase(x_gradient, y_gradient, phase);
+    cv::phase(Dx, Dy, phase);
 
     // Passo 3: Soppressione dei non-massimi (NMS)
     Mat NMS = Mat::zeros(magnitude.size(), CV_8U);

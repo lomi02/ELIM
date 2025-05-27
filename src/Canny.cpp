@@ -6,18 +6,18 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
     Mat img = input.clone();
     GaussianBlur(img, img, Size(3, 3), 0.5, 0.5);
 
-    Mat x_gradient, y_gradient;
-    Sobel(img, x_gradient, CV_32F, 1, 0);
-    Sobel(img, y_gradient, CV_32F, 0, 1);
+    Mat Dx, Dy;
+    Sobel(img, Dx, CV_32F, 1, 0);
+    Sobel(img, Dy, CV_32F, 0, 1);
 
-    Mat x_gradient2, y_gradient2, magnitude;
-    pow(x_gradient, 2, x_gradient2);
-    pow(y_gradient, 2, y_gradient2);
-    sqrt(x_gradient2 + y_gradient2, magnitude);
+    Mat Dx2, Dy2, magnitude;
+    pow(Dx, 2, Dx2);
+    pow(Dy, 2, Dy2);
+    sqrt(Dx2 + Dy2, magnitude);
 
     normalize(magnitude, magnitude, 0, 255, NORM_MINMAX, CV_8U);
     Mat phase;
-    cv::phase(x_gradient, y_gradient, phase);
+    cv::phase(Dx, Dy, phase);
 
     Mat NMS = Mat::zeros(magnitude.size(), CV_8U);
     for (int x = 1; x < magnitude.rows - 1; x++)
