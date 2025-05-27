@@ -2,36 +2,33 @@
 using namespace std;
 using namespace cv;
 
-Mat hough_circles(Mat &input, int houghTH, int radiusMin, int radiusMax, int cannyTHL, int cannyTHH, int blurSize, float blurSigma) {
+Mat hough_circles(Mat &input, int houghTH, int Rmin, int Rmax) {
     Mat img = input.clone();
 
-    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma, blurSigma);
-    Canny(img, img, cannyTHL, cannyTHH);
+    GaussianBlur(img, img, Size(5, 5), 0.5, 0.5);
+    Canny(img, img, 100, 250);
 
-    int radiusOffset = radiusMax - radiusMin + 1;
-    int sizes[] = {img.rows, img.cols, radiusOffset};
-    auto votes = Mat(3, sizes, CV_8U, Scalar(0));
+    vector votes(img.rows, vector(img.cols, vector(Rmax - Rmin + 1, 0)));
 
     for (int x = 0; x < img.rows; x++)
         for (int y = 0; y < img.cols; y++)
             if (img.at<uchar>(x, y) == 255)
-                for (int radius = radiusMin; radius < radiusMax; radius++)
-                    for (int thetaDegrees = 0; thetaDegrees < 360; thetaDegrees++) {
-                        double thetaRadians = thetaDegrees * CV_PI / 180;
+                for (int r = Rmin; r < Rmax; r++)
+                    for (int theta = 0; theta < 360; theta++) {
 
-                        int alpha = cvRound(x - radius * cos(thetaRadians));
-                        int beta = cvRound(y - radius * sin(thetaRadians));
+                        int a = y - r * cos(theta * CV_PI / 180);
+                        int b = x - r * sin(theta * CV_PI / 180);
 
-                        if (alpha >= 0 && alpha < img.rows && beta >= 0 && beta < img.cols)
-                            votes.at<uchar>(alpha, beta, radius - radiusMin)++;
+                        if (a >= 0 && a < img.rows && b >= 0 && b < img.cols)
+                            votes[a][b][r - Rmin]++;
                     }
 
     Mat out = input.clone();
-    for (int radius = radiusMin; radius < radiusMax; radius++)
-        for (int alpha = 0; alpha < img.rows; alpha++)
-            for (int beta = 0; beta < img.cols; beta++)
-                if (votes.at<uchar>(alpha, beta, radius - radiusMin) > houghTH)
-                    circle(out, Point(beta, alpha), radius, Scalar(0), 2, 8);
+    for (int a = 0; a < img.rows; a++)
+        for (int b = 0; b < img.cols; b++)
+            for (int r = Rmin; r < Rmax; r++)
+                if (votes[a][b][r - Rmin] > houghTH)
+                    circle(out, Point(a, b), r, Scalar(0));
 
     return out;
 }
@@ -43,14 +40,11 @@ int main(int argc, char **argv) {
     //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
     if (src.empty()) return -1;
 
-    int houghTH = 210;
-    int radMin = 20;
-    int radMax = 70;
-    int cannyTHL = 5;
-    int cannyTHH = 20;
-    int blurSize = 3;
-    float blurSigma  = 0.5;
-    Mat dst = hough_circles(src, houghTH, radMin, radMax, cannyTHL, cannyTHH, blurSize, blurSigma);
+    int houghTH = 175;
+    int Rmin = 20;
+    int Rmax = 70;
+
+    Mat dst = hough_circles(src, houghTH, Rmin, Rmax);
 
     imshow("Hough Circles", dst);
     waitKey(0);

@@ -2,7 +2,7 @@
 using namespace std;
 using namespace cv;
 
-Mat harris(Mat &input, float k, int threshTH, int blurSize, float blurSigma) {
+Mat harris(Mat &input, float k, int threshTH) {
     Mat img = input.clone();
 
     Mat Dx, Dy;
@@ -14,9 +14,9 @@ Mat harris(Mat &input, float k, int threshTH, int blurSize, float blurSigma) {
     multiply(Dy, Dy, Dy2);
     multiply(Dx, Dy, DxDy);
 
-    GaussianBlur(Dx2, Dx2, Size(blurSize, blurSize), blurSigma, blurSigma);
-    GaussianBlur(Dy2, Dy2, Size(blurSize, blurSize), blurSigma, blurSigma);
-    GaussianBlur(DxDy, DxDy, Size(blurSize, blurSize), blurSigma, blurSigma);
+    GaussianBlur(Dx2, Dx2, Size(3, 3), 0.5, 0.5);
+    GaussianBlur(Dy2, Dy2, Size(3, 3), 0.5, 0.5);
+    GaussianBlur(DxDy, DxDy, Size(3, 3), 0.5, 0.5);
 
     Mat det = Dx2.mul(Dy2) - DxDy.mul(DxDy);
     Mat trace = Dx2 + Dy2;
@@ -42,10 +42,8 @@ int main(int argc, char **argv) {
     if (src.empty()) return -1;
 
     float k = 0.05;
-    int blurSize = 3;
-    float blurSigma = 2.0;
     int threshTH = 117;
-    Mat dst = harris(src, k, threshTH, blurSize, blurSigma);
+    Mat dst = harris(src, k, threshTH);
 
     imshow("Harris", dst);
     waitKey(0);

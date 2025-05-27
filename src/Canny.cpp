@@ -2,9 +2,9 @@
 using namespace std;
 using namespace cv;
 
-Mat canny(Mat &input, int cannyLTH, int cannyHTH, int blurSize, int blurSigma) {
+Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
     Mat img = input.clone();
-    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma, blurSigma);
+    GaussianBlur(img, img, Size(3, 3), 0.5, 0.5);
 
     Mat x_gradient, y_gradient;
     Sobel(img, x_gradient, CV_32F, 1, 0);
@@ -52,15 +52,22 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH, int blurSize, int blurSigma) {
                 NMS.at<uchar>(x, y) = curr;
         }
 
-    Mat edges = Mat::zeros(NMS.size(), CV_8U);
+    Mat out = Mat::zeros(NMS.size(), CV_8U);
     for (int x = 0; x < NMS.rows; x++)
         for (int y = 0; y < NMS.cols; y++) {
             uchar val = NMS.at<uchar>(x, y);
-            if (val >= cannyLTH && val <= cannyHTH)
-                edges.at<uchar>(x, y) = 255;
+            if (val > cannyLTH)
+                out.at<uchar>(x, y) = 255;
+
+            for (int nx = -1; nx <= 1; nx++)
+                for (int ny = -1; ny <= 1; ny++)
+                    if (NMS.at<uchar>(x + nx, y + ny) >= cannyLTH && NMS.at<uchar>(x + nx, y + ny) <= cannyHTH)
+                        out.at<uchar>(x + nx, y + ny) = 255;
+                    else
+                        out.at<uchar>(x, y) = 0;
         }
 
-    return edges;
+    return out;
 }
 
 int main(int argc, char **argv) {
@@ -72,10 +79,8 @@ int main(int argc, char **argv) {
 
     int cannyLTH = 20;
     int cannyHTH = 150;
-    int blurSize = 3;
-    float blurSigma = 0.5;
 
-    Mat dst = canny(src, cannyLTH, cannyHTH, blurSize, blurSigma);
+    Mat dst = canny(src, cannyLTH, cannyHTH);
 
     imshow("Canny", dst);
     waitKey(0);

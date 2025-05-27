@@ -17,12 +17,10 @@ using namespace cv;
  * @param input     Immagine in input (scala di grigi)
  * @param k         Parametro del rilevatore di Harris (tipicamente tra 0.04 e 0.06)
  * @param threshTH  Soglia per il rilevamento degli angoli (default 70)
- * @param blurSize  Dimensione del kernel gaussiano per lo smoothing (default 3)
- * @param blurSigma Deviazione standard per lo sfocamento gaussiano (default 0.5)
  *
  * @return Immagine con gli angoli rilevati marcati da cerchi
  */
-Mat harris(Mat &input, float k, int threshTH, int blurSize, float blurSigma) {
+Mat harris(Mat &input, float k, int threshTH) {
     Mat img = input.clone();
 
     // Passo 1: Calcolo delle derivate spaziali usando Sobel
@@ -43,9 +41,9 @@ Mat harris(Mat &input, float k, int threshTH, int blurSize, float blurSigma) {
 
     // Passo 3: Smoothing gaussiano delle derivate
     // Applica un filtro gaussiano per integrare le informazioni su un intorno
-    GaussianBlur(Dx2, Dx2, Size(blurSize, blurSize), blurSigma, blurSigma);     // Smoothing di Dx²
-    GaussianBlur(Dy2, Dy2, Size(blurSize, blurSize), blurSigma, blurSigma);     // Smoothing di Dy²
-    GaussianBlur(DxDy, DxDy, Size(blurSize, blurSize), blurSigma, blurSigma);   // Smoothing di DxDy
+    GaussianBlur(Dx2, Dx2, Size(3, 3), 0.5, 0.5);
+    GaussianBlur(Dy2, Dy2, Size(3, 3), 0.5, 0.5);
+    GaussianBlur(DxDy, DxDy, Size(3, 3), 0.5, 0.5);
 
     // Passo 4: Calcolo del determinante e traccia del tensore strutturale
     // det(M) = Dx² * Dy² - (DxDy)²

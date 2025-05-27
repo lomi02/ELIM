@@ -15,16 +15,14 @@ using namespace cv;
  * @param input     Immagine in input (scala di grigi)
  * @param cannyLTH  Soglia inferiore per l'isteresi (valori tipici 5-30)
  * @param cannyHTH  Soglia superiore per l'isteresi (valori tipici 30-150)
- * @param blurSize  Dimensione del kernel gaussiano (default 3)
- * @param blurSigma Deviazione standard per lo sfocamento (default 0.5)
  *
  * @return Immagine binaria con i bordi rilevati (255=bordo, 0=sfondo)
  */
-Mat canny(Mat &input, int cannyLTH, int cannyHTH, int blurSize, int blurSigma) {
+Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
 
     // Passo 1: Pre-elaborazione - Riduzione del rumore con filtro gaussiano
     Mat img = input.clone();
-    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma, blurSigma);
+    GaussianBlur(img, img, Size(3, 3), 0.5, 0.5);
 
     // Passo 2: Calcolo del gradiente
     Mat x_gradient, y_gradient;
@@ -94,7 +92,7 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH, int blurSize, int blurSigma) {
         }
 
     // Passo 4: Sogliatura con isteresi
-    Mat edges = Mat::zeros(NMS.size(), CV_8U);
+    Mat out = Mat::zeros(NMS.size(), CV_8U);
 
     // Scansione completa dell'immagine
     for (int x = 0; x < NMS.rows; x++)
@@ -102,9 +100,17 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH, int blurSize, int blurSigma) {
             uchar val = NMS.at<uchar>(x, y);
 
             // Se il pixel supera la soglia alta, è un bordo forte
-            if (val >= cannyLTH && val <= cannyHTH)
-                edges.at<uchar>(x, y) = 255;
+            if (val > cannyLTH)
+                out.at<uchar>(x, y) = 255;
+
+            // Altrimenti, controllo se i vicini del pixel di bordo rientrano nella soglia
+            for (int nx = -1; nx <= 1; nx++)
+                for (int ny = -1; ny <= 1; ny++)
+                    if (NMS.at<uchar>(x + nx, y + ny) >= cannyLTH && NMS.at<uchar>(x + nx, y + ny) <= cannyHTH)
+                        out.at<uchar>(x + nx, y + ny) = 255;
+                    else
+                        out.at<uchar>(x, y) = 0;
         }
 
-    return edges;
+    return out;
 }
