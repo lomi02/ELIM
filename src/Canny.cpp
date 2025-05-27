@@ -2,7 +2,7 @@
 using namespace std;
 using namespace cv;
 
-Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize, float blurSigma) {
+Mat canny(Mat &input, int cannyTH, int blurSize, int blurSigma) {
     Mat img = input.clone();
     GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma, blurSigma);
 
@@ -56,18 +56,8 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize, float blurSigma)
     for (int x = 0; x < NMS.rows; x++)
         for (int y = 0; y < NMS.cols; y++) {
             uchar val = NMS.at<uchar>(x, y);
-            if (val >= cannyTHH) {
+            if (val >= cannyTH)
                 edges.at<uchar>(x, y) = 255;
-                for (int dx = -1; dx <= 1; dx++)
-                    for (int dy = -1; dy <= 1; dy++) {
-                        int nx = x + dx, ny = y + dy;
-
-                        if (nx >= 0 && nx < NMS.rows && ny >= 0 && ny < NMS.cols &&
-                            NMS.at<uchar>(nx, ny) >= cannyTHL) {
-                            edges.at<uchar>(nx, ny) = 255;
-                        }
-                    }
-            }
         }
 
     return edges;

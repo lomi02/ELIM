@@ -13,14 +13,13 @@ using namespace cv;
  * 5. Applica una sogliatura con isteresi usando due soglie
  *
  * @param input     Immagine in input (scala di grigi)
- * @param cannyTHL  Soglia inferiore per l'isteresi (valori tipici 10-50)
- * @param cannyTHH  Soglia superiore per l'isteresi (valori tipici 30-150)
+ * @param cannyTH   Soglia per l'isteresi (valori tipici 30-150)
  * @param blurSize  Dimensione del kernel gaussiano (default 3)
  * @param blurSigma Deviazione standard per lo sfocamento (default 0.5)
  *
  * @return Immagine binaria con i bordi rilevati (255=bordo, 0=sfondo)
  */
-Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize, float blurSigma) {
+Mat canny(Mat &input, int cannyTH, int blurSize, float blurSigma) {
 
     // Passo 1: Pre-elaborazione - Riduzione del rumore con filtro gaussiano
     Mat img = input.clone();
@@ -102,21 +101,8 @@ Mat canny(Mat &input, int cannyTHL, int cannyTHH, int blurSize, float blurSigma)
             uchar val = NMS.at<uchar>(x, y);
 
             // Se il pixel supera la soglia alta, è un bordo forte
-            if (val >= cannyTHH) {
+            if (val >= cannyTH)
                 edges.at<uchar>(x, y) = 255;
-
-                // Analisi dell'intorno 3x3 per trovare bordi deboli collegati
-                for (int dx = -1; dx <= 1; dx++)
-                    for (int dy = -1; dy <= 1; dy++) {
-                        int nx = x + dx, ny = y + dy;
-
-                        // Verifica che il pixel sia dentro i bordi e nella soglia debole
-                        if (nx >= 0 && nx < NMS.rows && ny >= 0 && ny < NMS.cols &&
-                            NMS.at<uchar>(nx, ny) >= cannyTHL) {
-                            edges.at<uchar>(nx, ny) = 255;
-                            }
-                    }
-            }
         }
 
     return edges;
