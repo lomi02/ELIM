@@ -13,13 +13,14 @@ using namespace cv;
  * 5. Applica una sogliatura con isteresi usando due soglie
  *
  * @param input     Immagine in input (scala di grigi)
- * @param cannyTH   Soglia per l'isteresi (valori tipici 30-150)
+ * @param cannyLTH  Soglia inferiore per l'isteresi (valori tipici 5-30)
+ * @param cannyHTH  Soglia superiore per l'isteresi (valori tipici 30-150)
  * @param blurSize  Dimensione del kernel gaussiano (default 3)
  * @param blurSigma Deviazione standard per lo sfocamento (default 0.5)
  *
  * @return Immagine binaria con i bordi rilevati (255=bordo, 0=sfondo)
  */
-Mat canny(Mat &input, int cannyTH, int blurSize, float blurSigma) {
+Mat canny(Mat &input, int cannyLTH, int cannyHTH, int blurSize, int blurSigma) {
 
     // Passo 1: Pre-elaborazione - Riduzione del rumore con filtro gaussiano
     Mat img = input.clone();
@@ -101,7 +102,7 @@ Mat canny(Mat &input, int cannyTH, int blurSize, float blurSigma) {
             uchar val = NMS.at<uchar>(x, y);
 
             // Se il pixel supera la soglia alta, è un bordo forte
-            if (val >= cannyTH)
+            if (val >= cannyLTH && val <= cannyHTH)
                 edges.at<uchar>(x, y) = 255;
         }
 
