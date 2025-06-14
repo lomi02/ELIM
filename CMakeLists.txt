@@ -5,6 +5,6 @@ set(CMAKE_CXX_STANDARD 26)
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_executable(AlgoritmiEsame Blackboard.cpp)
+add_executable(AlgoritmiEsame src/Split&Merge.cpp)
 
 target_link_libraries(AlgoritmiEsame ${OpenCV_LIBS})
