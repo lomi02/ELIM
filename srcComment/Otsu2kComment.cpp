@@ -5,90 +5,91 @@ using namespace cv;
 /**
  * Applica l'algoritmo di sogliatura a due livelli di Otsu (Otsu2k) a un'immagine in input.
  *
- * L'algoritmo estende il metodo di Otsu classico dividendo l'immagine in tre regioni:
- * sfondo, medio-piano e primo piano, trovando due valori di soglia ottimali.
+ * L'algoritmo divide l'immagine in tre regioni (sfondo, medio-piano, primo piano)
+ * trovando automaticamente due soglie ottimali che massimizzano la varianza tra classi.
  *
- * La funzione esegue questi passaggi:
- * 1. Applica uno sfocatura gaussiana per ridurre il rumore
- * 2. Calcola l'istogramma normalizzato dell'immagine
- * 3. Calcola le probabilità e medie cumulative
- * 4. Calcola la media globale
- * 5. Trova le due soglie ottimali massimizzando la varianza tra classi
- * 6. Applica la sogliatura con i due valori trovati
+ * Passaggi principali:
+ * 1. Pre-processing con filtro Gaussiano
+ * 2. Calcolo istogramma normalizzato
+ * 3. Calcolo probabilità e medie cumulative
+ * 4. Ricerca soglie ottimali k1 e k2
+ * 5. Applicazione delle soglie all'immagine
  *
- * @param input Immagine in input (scala di grigi)
- * @return Immagine con pixel separati in sfondo (0), medio-piano (127) e primo piano (255)
+ * @param input Immagine in scala di grigi (CV_8UC1)
+ * @return Immagine segmentata (0=sfondo, 127=medio-piano, 255=primo piano)
  */
-Mat otsu2k(const Mat &input) {
+Mat otsu2k(Mat &input) {
 
-    // Passo 1: Applicazione dello sfocamento gaussiano per ridurre il rumore
-    Mat img;
-    GaussianBlur(input, img, Size(5, 5), 0.5);
+    // Passo 1: Pre-processing - Riduzione rumore con filtro Gaussiano
+    Mat img = input.clone();
+    GaussianBlur(img, img, Size(3, 3), 1);
 
-    // Passo 2: Calcolo dell'istogramma normalizzato dell'immagine
-    vector<double> histogram(256, 0.0);
+    // Passo 2: Calcolo istogramma normalizzato
+    vector hist(256, 0.0);
     for (int x = 0; x < img.rows; x++)
         for (int y = 0; y < img.cols; y++)
-            histogram.at(img.at<uchar>(x, y))++;    // Incrementa il bin corrispondente al valore del pixel
+            hist[img.at<uchar>(x, y)]++;  // Conteggio frequenze dei livelli di grigio
 
-    // Normalizzazione dell'istogramma
-    int totalPixels = img.rows * img.cols;
-    for (double &bin: histogram)
-        bin /= totalPixels;     // Converti in probabilità dividendo per il numero totale di pixel
+    // Normalizzazione dell'istogramma (conversione in probabilità)
+    double totalPixels = img.rows * img.cols;
+    for (double &val : hist)
+        val /= totalPixels;
 
-    // Passo 3: Calcolo delle probabilità e medie cumulative
+    // Passo 3: Calcolo probabilità cumulative (cumProb) e medie cumulative (cumMean)
     vector<double> cumProb(256, 0.0), cumMean(256, 0.0);
-    cumProb[0] = histogram[0];
+    cumProb[0] = hist[0];
     cumMean[0] = 0.0;
     for (int i = 1; i < 256; ++i) {
-        cumProb[i] = cumProb[i - 1] + histogram[i];
-        cumMean[i] = cumMean[i - 1] + i * histogram[i];
+        cumProb[i] = cumProb[i - 1] + hist[i];      // Probabilità cumulativa
+        cumMean[i] = cumMean[i - 1] + i * hist[i];  // Media cumulativa ponderata
     }
 
-    // Passo 4: Calcolo della media globale
-    double globalMean = cumMean[255];
+    // Passo 4: Calcolo media globale e inizializzazione variabili per la ricerca
+    double globalMean = cumMean[255];   // Media globale dell'immagine
+    double maxVar = 0.0;                // Massima varianza tra classi trovata
+    vector th(2, 0);                    // Soglie ottimali (k1, k2)
 
-    // Passo 5: Ricerca delle soglie ottimali k1 e k2
-    double maxVariance = 0.0;
-    int bestK1 = 0, bestK2 = 0;
-
+    // Ricerca esaustiva delle soglie ottimali k1 e k2
     for (int k1 = 1; k1 < 254; ++k1)
         for (int k2 = k1 + 1; k2 < 255; ++k2) {
-
-            // Calcolo delle probabilità delle tre classi
+            // Calcolo probabilità delle tre classi:
+            // w0: Pixels <= k1 (sfondo)
+            // w1: k1 < Pixels <= k2 (medio-piano)
+            // w2: Pixels > k2 (primo piano)
             double w0 = cumProb[k1];
             double w1 = cumProb[k2] - cumProb[k1];
             double w2 = 1.0 - cumProb[k2];
 
-            // Calcolo delle medie delle tre classi
+            // Calcolo medie delle classi (evitando divisioni per zero)
             double m0 = w0 > 0 ? cumMean[k1] / w0 : 0.0;
-            double m1 = w1 > 0 ? (cumMean[k2] - cumMean[k1]) / w1 : 0;
-            double m2 = w2 > 0 ? (cumMean[255] - cumMean[k2]) / w2 : 0;
+            double m1 = w1 > 0 ? (cumMean[k2] - cumMean[k1]) / w1 : 0.0;
+            double m2 = w2 > 0 ? (cumMean[255] - cumMean[k2]) / w2 : 0.0;
 
-            // Calcolo della varianza tra classi (criterio di Otsu)
-            double betweenClassVariance = w0 * (m0 - globalMean) * (m0 - globalMean) +
-                                          w1 * (m1 - globalMean) * (m1 - globalMean) +
-                                          w2 * (m2 - globalMean) * (m2 - globalMean);
+            // Calcolo varianza inter-classe (criterio di Otsu)
+            double var = w0 * (m0 - globalMean) * (m0 - globalMean) +
+                         w1 * (m1 - globalMean) * (m1 - globalMean) +
+                         w2 * (m2 - globalMean) * (m2 - globalMean);
 
-            // Aggiornamento delle soglie ottimali se si trova una varianza maggiore
-            if (betweenClassVariance > maxVariance) {
-                maxVariance = betweenClassVariance;
-                bestK1 = k1;
-                bestK2 = k2;
+            // Aggiornamento soglie se si trova una varianza maggiore
+            if (var > maxVar) {
+                maxVar = var;
+                th[0] = k1;
+                th[1] = k2;
             }
         }
 
-    // Passo 6: Sogliatura dell'immagine usando le due soglie ottimali
+    // Passo 5: Applicazione delle soglie all'immagine
     Mat out = Mat::zeros(img.size(), CV_8U);
-    for (int x = 0; x < img.rows; x++)
+    for (int x = 0; x < img.rows; x++) {
         for (int y = 0; y < img.cols; y++) {
             uchar pixel = img.at<uchar>(x, y);
-            if (pixel >= bestK2)
+            if (pixel >= th[1])
                 out.at<uchar>(x, y) = 255;  // Primo piano (bianco)
-            else if (pixel >= bestK1)
+            else if (pixel >= th[0])
                 out.at<uchar>(x, y) = 127;  // Medio-piano (grigio)
-            // Sfondo rimane nero (0)
+            // Sfondo rimane 0 (nero)
         }
+    }
 
     return out;
 }
