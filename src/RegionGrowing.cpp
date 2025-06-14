@@ -2,29 +2,19 @@
 using namespace std;
 using namespace cv;
 
-bool inRange(const Mat &img, Point neigh) {
-    return neigh.x >= 0 && neigh.x < img.cols
-           && neigh.y >= 0 && neigh.y < img.rows;
-}
-
-bool isSimilar(const Mat &img, Point p1, Point p2, int similTH) {
-    return abs(img.at<uchar>(p1) - img.at<uchar>(p2)) <= similTH;
-}
-
 Mat region_growing(const Mat &input, int similTH, Point seed) {
-    Mat img = input.clone();
-    Mat out = Mat::zeros(img.size(), CV_8U);
-
     Mat visited = Mat::zeros(input.size(), CV_8U);
+
     queue<Point> pixelQueue;
     pixelQueue.push(seed);
     visited.at<uchar>(seed) = 1;
 
     Point neighbors[] = {
         Point(0, -1), Point(-1, 0),
-        Point(1, 0),  Point(0, 1)
+        Point(1, 0), Point(0, 1)
     };
 
+    Mat out = Mat::zeros(input.size(), CV_8U);
     while (!pixelQueue.empty()) {
         Point currentPx = pixelQueue.front();
         pixelQueue.pop();
@@ -32,12 +22,14 @@ Mat region_growing(const Mat &input, int similTH, Point seed) {
 
         for (const Point &offset: neighbors) {
             Point neighPx = currentPx + offset;
-            if (inRange(input, neighPx) &&
+
+            if (neighPx.x >= 0 && neighPx.x < input.cols &&
+                neighPx.y >= 0 && neighPx.y < input.rows &&
                 visited.at<uchar>(neighPx) == 0 &&
-                isSimilar(input, currentPx, neighPx, similTH)) {
+                abs(input.at<uchar>(currentPx) - input.at<uchar>(neighPx)) <= similTH) {
                 visited.at<uchar>(neighPx) = 1;
                 pixelQueue.push(neighPx);
-                }
+            }
         }
     }
 

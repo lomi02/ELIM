@@ -3,89 +3,62 @@ using namespace std;
 using namespace cv;
 
 /**
- * Controlla se un punto è all'interno dei confini dell'immagine.
- *
- * @param img   L'immagine di riferimento per le dimensioni
- * @param neigh Il punto da verificare
- * @return      True se il punto è dentro i limiti, false altrimenti
- */
-bool inRange(const Mat &img, Point neigh) {
-    return neigh.x >= 0 && neigh.x < img.cols &&    // Controllo coordinata x
-           neigh.y >= 0 && neigh.y < img.rows;      // Controllo coordinata y
-}
-
-/**
- * Verifica la similarità di intensità tra due pixel.
- *
- * @param img       Immagine di riferimento
- * @param p1        Primo pixel da confrontare
- * @param p2        Secondo pixel da confrontare
- * @param similTH   Soglia di differenza di intensità consentita
- * @return          True se la differenza è entro la soglia, false altrimenti
- */
-bool isSimilar(const Mat &img, Point p1, Point p2, int similTH) {
-
-    // Calcola la differenza assoluta tra le intensità
-    int intensityDelta = abs(img.at<uchar>(p1) - img.at<uchar>(p2));
-    return intensityDelta <= similTH;   // Confronto con la soglia
-}
-
-/**
  * Implementa l'algoritmo di region growing per la segmentazione di immagini.
  *
- * L'algoritmo parte da un pixel seed e cresce la regione includendo pixel vicini
- * con intensità simili, usando un approccio breadth-first search.
+ * Parte da un punto seed e propaga la regione considerando i pixel adiacenti
+ * la cui intensità è simile (in base a una soglia). Usa una strategia BFS.
  *
  * @param input     Immagine di input in scala di grigi (8-bit)
- * @param similTH   Soglia di similarità per l'inclusione nella regione
- * @param seed      Punto di partenza (default: angolo in alto a sinistra)
- * @return          Immagine binaria con la regione segmentata (255) e lo sfondo (0)
+ * @param similTH   Soglia di similarità per accettare un pixel nella regione
+ * @param seed      Punto di partenza da cui inizia la crescita della regione
+ * @return          Immagine binaria (255 = pixel nella regione, 0 = sfondo)
  */
-Mat region_growing(const Mat &input, int similTH, Point seed = Point(0, 0)) {
-    Mat img = input.clone();
-    Mat out = Mat::zeros(img.size(), CV_8U);
+Mat region_growing(const Mat &input, int similTH, Point seed) {
+    // Crea una matrice per tenere traccia dei pixel già visitati
+    Mat visited = Mat::zeros(input.size(), CV_8U);
 
-    // Matrice per tracciare i pixel già visitati
-    Mat visited = Mat::zeros(img.size(), CV_8U);
-
-    // Coda per l'implementazione BFS (Breadth-First Search)
+    // Coda per la BFS (Breadth-First Search)
     queue<Point> pixelQueue;
-    pixelQueue.push(seed);          // Inizia dal pixel seed
+    pixelQueue.push(seed);          // Aggiunge il seed alla coda
     visited.at<uchar>(seed) = 1;    // Marca il seed come visitato
 
-    // Definizione degli 8 vicini (connessione 8-way)
+    // Definizione dei 4 vicini (connessione 4-way)
     Point neighbors[] = {
         Point(0, -1), Point(-1, 0),
         Point(1, 0),  Point(0, 1)
     };
 
-    // Algoritmo principale - continua finché ci sono pixel da processare
+    // Immagine di output: inizialmente tutta nera (0)
+    Mat out = Mat::zeros(input.size(), CV_8U);
+
+    // Algoritmo principale - esplora i pixel finché la coda non è vuota
     while (!pixelQueue.empty()) {
 
-        // Prende il prossimo pixel dalla coda
+        // Estrae il pixel corrente dalla coda
         Point currentPx = pixelQueue.front();
         pixelQueue.pop();
 
-        // Marca il pixel come parte della regione (255 = bianco)
+        // Marca il pixel corrente come parte della regione (255 = bianco)
         out.at<uchar>(currentPx) = 255;
 
-        // Esplora tutti gli 8 vicini
+        // Scorre tutti i vicini
         for (const Point &offset : neighbors) {
             Point neighPx = currentPx + offset;
 
-            // Condizioni per includere il vicino:
-            // 1. Deve essere dentro l'immagine
-            // 2. Non deve essere già stato visitato
-            // 3. Deve avere intensità simile al pixel corrente
-            if (inRange(img, neighPx) &&
+            // Verifica le condizioni per includere il vicino:
+            // 1. Deve essere dentro i bordi dell'immagine
+            // 2. Non deve essere stato visitato
+            // 3. La differenza di intensità deve essere <= soglia
+            if (neighPx.x >= 0 && neighPx.x < input.cols &&
+                neighPx.y >= 0 && neighPx.y < input.rows &&
                 visited.at<uchar>(neighPx) == 0 &&
-                isSimilar(img, currentPx, neighPx, similTH)) {
+                abs(input.at<uchar>(currentPx) - input.at<uchar>(neighPx)) <= similTH) {
 
-                visited.at<uchar>(neighPx) = 1; // Marca come visitato
-                pixelQueue.push(neighPx);       // Aggiunge alla coda
+                visited.at<uchar>(neighPx) = 1;     // Marca il vicino come visitato
+                pixelQueue.push(neighPx);           // Aggiunge alla coda per processarlo
             }
         }
     }
 
-    return out;  // Restituisce la mappa binaria della regione
+    return out;  // Restituisce la regione segmentata come immagine binaria
 }
