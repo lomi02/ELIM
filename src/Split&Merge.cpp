@@ -90,10 +90,15 @@ void splitAndMerge(Mat img, double splitTH, int minSize, double mergeTH) {
 
 int main(int argc, char **argv) {
     const char *path = argc > 1 ? argv[1] : "../immagini/foglia.png";
-    Mat img = imread(samples::findFile(path), IMREAD_GRAYSCALE);
+    Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
 
-    if (img.empty()) return -1;
+    //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
+    if (src.empty()) return -1;
 
-    splitAndMerge(img, 10, 8, 5);
+    double splitTH = 10;
+    int minSize = 8;
+    double mergeTH = 5;
+
+    splitAndMerge(src, splitTH, minSize, mergeTH);
     return 0;
 }
