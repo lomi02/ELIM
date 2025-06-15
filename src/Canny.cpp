@@ -1,18 +1,18 @@
 #include <opencv2/opencv.hpp>
-using namespace std;
 using namespace cv;
+using namespace std;
 
 Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
     Mat img = input.clone();
-    GaussianBlur(img, img, Size(3, 3), 0.5, 0.5);
+    GaussianBlur(img, img, Size(3, 3), 1, 1);
 
     Mat Dx, Dy;
     Sobel(img, Dx, CV_32F, 1, 0);
     Sobel(img, Dy, CV_32F, 0, 1);
 
     Mat Dx2, Dy2, magnitude;
-    pow(Dx, 2, Dx2);
-    pow(Dy, 2, Dy2);
+    multiply(Dx, Dx, Dx2);
+    multiply(Dy, Dy, Dy2);
     sqrt(Dx2 + Dy2, magnitude);
 
     normalize(magnitude, magnitude, 0, 255, NORM_MINMAX, CV_8U);
@@ -31,19 +31,13 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
             if (angle < 45) {
                 pixel1 = magnitude.at<uchar>(x + 1, y);
                 pixel2 = magnitude.at<uchar>(x - 1, y);
-            }
-
-            else if (angle < 90) {
+            } else if (angle < 90) {
                 pixel1 = magnitude.at<uchar>(x + 1, y - 1);
                 pixel2 = magnitude.at<uchar>(x - 1, y + 1);
-            }
-
-            else if (angle < 135) {
+            } else if (angle < 135) {
                 pixel1 = magnitude.at<uchar>(x, y + 1);
                 pixel2 = magnitude.at<uchar>(x, y - 1);
-            }
-
-            else {
+            } else {
                 pixel1 = magnitude.at<uchar>(x + 1, y + 1);
                 pixel2 = magnitude.at<uchar>(x - 1, y - 1);
             }
@@ -54,19 +48,14 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
 
     Mat out = Mat::zeros(NMS.size(), CV_8U);
     for (int x = 0; x < NMS.rows; x++)
-        for (int y = 0; y < NMS.cols; y++) {
-            uchar val = NMS.at<uchar>(x, y);
-            if (val > cannyLTH)
+        for (int y = 0; y < NMS.cols; y++)
+            if (NMS.at<uchar>(x, y) > cannyLTH && NMS.at<uchar>(x, y) < cannyHTH) {
                 out.at<uchar>(x, y) = 255;
-
-            for (int nx = -1; nx <= 1; nx++)
-                for (int ny = -1; ny <= 1; ny++)
-                    if (NMS.at<uchar>(x + nx, y + ny) >= cannyLTH && NMS.at<uchar>(x + nx, y + ny) <= cannyHTH)
-                        out.at<uchar>(x + nx, y + ny) = 255;
-                    else
-                        out.at<uchar>(x, y) = 0;
-        }
-
+                for (int nx = -1; nx <= 1; nx++)
+                    for (int ny = -1; ny <= 1; ny++)
+                        if (NMS.at<uchar>(x + nx, y + ny) > cannyLTH && NMS.at<uchar>(x + nx, y + ny) < cannyHTH)
+                            out.at<uchar>(x, y) = 255;
+            }
     return out;
 }
 

@@ -93,24 +93,18 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
 
     // Passo 4: Sogliatura con isteresi
     Mat out = Mat::zeros(NMS.size(), CV_8U);
-
-    // Scansione completa dell'immagine
     for (int x = 0; x < NMS.rows; x++)
-        for (int y = 0; y < NMS.cols; y++) {
-            uchar val = NMS.at<uchar>(x, y);
+        for (int y = 0; y < NMS.cols; y++)
 
             // Se il pixel supera la soglia alta, è un bordo forte
-            if (val > cannyLTH)
+            if (NMS.at<uchar>(x, y) > cannyLTH && NMS.at<uchar>(x, y) < cannyHTH) {
                 out.at<uchar>(x, y) = 255;
 
-            // Altrimenti, controllo se i vicini del pixel di bordo rientrano nella soglia
-            for (int nx = -1; nx <= 1; nx++)
-                for (int ny = -1; ny <= 1; ny++)
-                    if (NMS.at<uchar>(x + nx, y + ny) >= cannyLTH && NMS.at<uchar>(x + nx, y + ny) <= cannyHTH)
-                        out.at<uchar>(x + nx, y + ny) = 255;
-                    else
-                        out.at<uchar>(x, y) = 0;
-        }
-
+                // Altrimenti, controllo se i vicini del pixel di bordo rientrano nella soglia
+                for (int nx = -1; nx <= 1; nx++)
+                    for (int ny = -1; ny <= 1; ny++)
+                        if (NMS.at<uchar>(x + nx, y + ny) > cannyLTH && NMS.at<uchar>(x + nx, y + ny) < cannyHTH)
+                            out.at<uchar>(x, y) = 255;
+            }
     return out;
 }
