@@ -2,172 +2,178 @@
 using namespace cv;
 using namespace std;
 
-// Struttura nodo per l'albero quaternario
-// Ogni nodo rappresenta una regione rettangolare dell'immagine
-struct QNode {
-    Rect rect;                      // Regione rettangolare del nodo
-    QNode *child[4] = {nullptr};    // 4 figli per il quadtree
-    double mean, dev;               // Media e deviazione standard della regione
-    bool isLeaf = true;             // Flag per identificare le foglie
+// Parametri globali di soglia
+double smThreshold = 10;   // Soglia di deviazione standard per il criterio di split
+int minRegSize = 8;        // Dimensione minima delle regioni
+int mThreshold = 1;        // Soglia di differenza di intensità per il merge
 
-    QNode(Rect r) : rect(r) {}
+/**
+ * Classe che rappresenta un nodo dell'albero quaternario.
+ *
+ * Ogni nodo contiene:
+ * - la regione rettangolare associata
+ * - i 4 figli (regioni suddivise)
+ * - l'elenco delle regioni unite (merge)
+ * - indicatori booleani per i figli uniti
+ * - le statistiche (media e deviazione standard)
+ */
+class TNode {
+public:
+    Rect region;                       // Regione rettangolare del nodo
+    vector<TNode *> regions = vector<TNode *>(4, nullptr); // Figli
+    vector<TNode *> merged;           // Regioni unite (merge)
+    vector<bool> isMerged = vector(4, false); // Flag per tenere traccia dei figli uniti
+    double stddev, mean, meanMerged;  // Statistiche
+
+    TNode(Rect R) { region = R; }
 };
 
 /**
- * Funzione ricorsiva per la fase di SPLIT dell'algoritmo Split and Merge.
+ * Funzione ricorsiva per la fase di SPLIT.
  *
- * Divide ricorsivamente l'immagine in quadranti se:
- * - La dimensione della regione è maggiore della dimensione minima
- * - La deviazione standard è maggiore della soglia (regione non omogenea)
+ * Divide ricorsivamente la regione R in 4 sotto-regioni
+ * se la deviazione standard supera la soglia e se la dimensione è sufficiente.
+ * Inoltre, disegna il rettangolo della regione per visualizzare il quadtree.
  *
- * @param img       Immagine su cui disegnare i bordi del quadtree
- * @param rect      Regione rettangolare corrente da analizzare
- * @param splitTH   Soglia di deviazione standard per decidere se dividere
- * @param minSize   Dimensione minima sotto la quale non dividere
- *
- * @return Puntatore al nodo radice della regione
+ * @param src  Immagine da segmentare
+ * @param R    Regione corrente da analizzare
+ * @return     Puntatore al nodo creato
  */
-QNode *split(Mat &img, Rect rect, double splitTH, int minSize) {
-    auto node = new QNode(rect);
+TNode *split(Mat &src, Rect R) {
+    auto node = new TNode(R);
 
-    // Calcolo delle statistiche della regione corrente
-    // mean = intensità media dei pixel nella regione
-    // dev = deviazione standard (misura di omogeneità)
-    Scalar mean, dev;
-    meanStdDev(img(rect), mean, dev);
+    // Calcolo della media e deviazione standard della regione
+    Scalar stddev, mean;
+    meanStdDev(src(R), mean, stddev);
+    node->stddev = stddev[0];
     node->mean = mean[0];
-    node->dev = dev[0];
 
-    // Condizione di split: dimensione sufficiente E regione non omogenea
-    if (rect.width > minSize && node->dev > splitTH) {
-        node->isLeaf = false;
-        int halfW = rect.width / 2, halfH = rect.height / 2;
+    // Condizione per lo split: dimensione minima e deviazione elevata
+    if (R.width > minRegSize && node->stddev > smThreshold) {
 
-        // Creazione dei 4 quadranti (ricorsivamente)
-        // Quadrante 0: top-left
-        node->child[0] = split(img, Rect(rect.x, rect.y, halfW, halfH), splitTH, minSize);
-
-        // Quadrante 1: top-right
-        node->child[1] = split(img, Rect(rect.x + halfW, rect.y, halfW, halfH), splitTH, minSize);
-
-        // Quadrante 2: bottom-left
-        node->child[2] = split(img, Rect(rect.x, rect.y + halfH, halfW, halfH), splitTH, minSize);
-
-        // Quadrante 3: bottom-right
-        node->child[3] = split(img, Rect(rect.x + halfW, rect.y + halfH, halfW, halfH), splitTH, minSize);
+        // Suddivide la regione in 4 sotto-regioni (quadtree)
+        node->regions[0] = split(src, Rect(R.x, R.y, R.height / 2, R.width / 2));
+        node->regions[1] = split(src, Rect(R.x, R.y + R.width / 2, R.height / 2, R.width / 2));
+        node->regions[2] = split(src, Rect(R.x + R.height / 2, R.y, R.height / 2, R.width / 2));
+        node->regions[3] = split(src, Rect(R.x + R.height / 2, R.y + R.width / 2, R.height / 2, R.width / 2));
     }
 
-    // Disegna il bordo della regione per visualizzare il quadtree
-    rectangle(img, rect, Scalar(0));
+    // Disegna il bordo della regione sul risultato
+    rectangle(src, R, Scalar(0));
     return node;
 }
 
 /**
- * Funzione ricorsiva per la fase di MERGE dell'algoritmo Split and Merge.
+ * Funzione ricorsiva per la fase di MERGE.
  *
- * Unisce regioni adiacenti che hanno intensità simile:
- * - Processa prima ricorsivamente tutti i figli
- * - Verifica se tutti i figli sono foglie con intensità simile
- * - Se sì, unisce i figli trasformando il nodo corrente in foglia
+ * Unisce le regioni figlie adiacenti se la differenza tra le loro medie
+ * di intensità è inferiore alla soglia mThreshold.
  *
- * @param node      Nodo corrente da processare
- * @param mergeTH   Soglia di differenza di intensità per il merge
+ * @param node Nodo corrente su cui applicare il merge
  */
-void merge(QNode *node, double mergeTH) {
-    if (node->isLeaf) return;
+void merge(TNode *node) {
 
-    // Passo 1: Ricorsione su tutti i figli (bottom-up)
-    for (int i = 0; i < 4; i++)
-        merge(node->child[i], mergeTH);
+    // Applica merge solo se ha figli e deviazione sufficiente
+    if (node->region.width > minRegSize && node->stddev > smThreshold) {
+        for (int i = 0; i < 4; i++) {
 
-    // Passo 2: Verifica se è possibile fare il merge
-    // Condizioni: tutti i figli devono essere foglie con intensità simile
-    bool canMerge = true;
-    for (int i = 0; i < 4; i++) {
+            // Verifica la somiglianza con il vicino (i+1)
+            if (abs((int) node->regions[i]->mean - (int) node->regions[(i + 1) % 4]->mean) < mThreshold) {
+                node->merged.push_back(node->regions[i]);
+                node->isMerged[i] = true;
 
-        // Se un figlio non è foglia, non possiamo fare merge
-        if (!node->child[i]->isLeaf) {
-            canMerge = false;
-            break;
+                node->merged.push_back(node->regions[(i + 1) % 4]);
+                node->isMerged[(i + 1) % 4] = true;
+
+                // Verifica possibilità di unione anche col terzo vicino
+                if (abs((int) node->regions[(i + 1) % 4]->mean - (int) node->regions[(i + 2) % 4]->mean) < mThreshold) {
+                    node->merged.push_back(node->regions[(i + 2) % 4]);
+                    node->isMerged[(i + 2) % 4] = true;
+                    break;
+                }
+
+                // Oppure con il quarto vicino
+                if (abs((int) node->regions[(i + 3) % 4]->mean - (int) node->regions[i]->mean) < mThreshold) {
+                    node->merged.push_back(node->regions[(i + 3) % 4]);
+                    node->isMerged[(i + 3) % 4] = true;
+                    break;
+                }
+            }
         }
-        // Se la differenza di intensità è troppo grande, non fare merge
-        if (abs(node->child[i]->mean - node->child[0]->mean) > mergeTH) {
-            canMerge = false;
-            break;
-        }
-    }
 
-    // Passo 3: Esegui il merge se possibile
-    if (canMerge) {
-        node->isLeaf = true;
-
-        // Calcola la nuova intensità media come media dei figli
-        node->mean = 0;
+        // Applica merge ricorsivamente ai sotto-nodi non uniti
         for (int i = 0; i < 4; i++)
-            node->mean += node->child[i]->mean;
-        node->mean /= 4;
+            if (!node->isMerged[i])
+                merge(node->regions[i]);
+    } else {
+
+        // Se non è possibile suddividere, considera il nodo come regione finale
+        node->merged.push_back(node);
     }
 }
 
 /**
  * Funzione ricorsiva per la fase di SEGMENTAZIONE.
  *
- * Applica l'intensità media calcolata a tutte le regioni finali:
- * - Se il nodo è una foglia, colora tutta la regione con la sua intensità media
- * - Altrimenti, processa ricorsivamente tutti i figli
+ * Applica l'intensità media calcolata alle regioni finali unite.
  *
- * @param node  Nodo corrente da segmentare
- * @param img   Immagine su cui applicare la segmentazione
+ * @param src Nodo corrente
+ * @param dst Immagine risultante da segmentare
  */
-void segment(QNode *node, Mat &img) {
-    if (node->isLeaf)
-        // Colora tutta la regione con l'intensità media
-        img(node->rect) = (int) node->mean;
-    else
-        // Ricorsione sui figli
-        for (int i = 0; i < 4; i++)
-            segment(node->child[i], img);
+void segment(TNode *src, Mat &dst) {
+    float val = 0;
+
+    // Calcola la media delle regioni unite
+    for (auto node: src->merged)
+        val += node->mean;
+    val /= src->merged.size();
+
+    // Applica la media alla regione
+    for (auto node: src->merged)
+        dst(node->region) = (int) val;
+
+    // Segmenta ricorsivamente i figli non uniti
+    for (int i = 0; i < 4; i++)
+        if (!src->isMerged[i] && src->regions[i])
+            segment(src->regions[i], dst);
 }
 
 /**
- * Implementazione completa dell'algoritmo Split and Merge per segmentazione di immagini.
+ * Funzione principale per eseguire l’intero algoritmo Split and Merge.
  *
- * L'algoritmo esegue tre fasi principali:
- * 1. SPLIT: Divide l'immagine in regioni basandosi sulla omogeneità
- * 2. MERGE: Unisce regioni adiacenti con caratteristiche simili
- * 3. SEGMENT: Applica un'intensità uniforme a ogni regione finale
+ * Passaggi:
+ * 1. Preprocessing con sfocatura (GaussianBlur)
+ * 2. SPLIT: divisione ricorsiva delle regioni
+ * 3. MERGE: unione delle regioni simili
+ * 4. SEGMENT: assegnazione delle intensità alle regioni finali
  *
- * @param img       Immagine in input (scala di grigi)
- * @param splitTH   Soglia per la fase di split (omogeneità)
- * @param minSize   Dimensione minima delle regioni
- * @param mergeTH   Soglia per la fase di merge (similarità)
+ * @param src     Immagine originale in input (grayscale)
+ * @param output  Immagine risultante segmentata
  */
-void splitAndMerge(Mat img, double splitTH, int minSize, double mergeTH) {
+void splitAndMerge(Mat &src, Mat &output) {
 
-    // Preprocessing: smoothing per ridurre il rumore
-    GaussianBlur(img, img, Size(5, 5), 0);
+    // Ridimensiona l’immagine a potenza di 2 per facilitare il quadtree
+    int exponent = log(min(src.rows, src.cols)) / log(2);
+    int size = pow(2.0, double(exponent));
+    Mat img = src(Rect(0, 0, size, size)).clone();
 
-    // Ridimensionamento a quadrato perfetto (potenza di 2)
-    // Necessario per la struttura ricorsiva del quadtree
-    int exponent = log(min(img.cols, img.rows)) / log(2);
-    int size = pow(2.0, (double) exponent);
-    img = img(Rect(0, 0, size, size)).clone();
+    // Preprocessing: sfocatura per ridurre il rumore
+    GaussianBlur(img, img, Size(3, 3), 0, 0);
 
-    // Creazione delle immagini di output
-    Mat qtree = img.clone();        // Per visualizzare il quadtree
-    Mat segmented = img.clone();    // Per la segmentazione finale
+    // Fase SPLIT: costruzione del quadtree
+    TNode *node = split(img, Rect(0, 0, img.rows, img.cols));
 
-    // Fase 1: SPLIT - Costruzione del quadtree
-    QNode *root = split(qtree, Rect(0, 0, size, size), splitTH, minSize);
+    // Fase MERGE: unione delle regioni adiacenti simili
+    merge(node);
 
-    // Fase 2: MERGE - Unione delle regioni simili
-    merge(root, mergeTH);
+    // Copia dell’immagine originale per la segmentazione
+    output = src(Rect(0, 0, size, size)).clone();
 
-    // Fase 3: SEGMENT - Applicazione della segmentazione
-    segment(root, segmented);
+    // Fase SEGMENT: applicazione delle intensità
+    segment(node, output);
 
     // Visualizzazione dei risultati
-    imshow("Quad Tree", qtree);         // Mostra la struttura del quadtree
-    imshow("Segmented", segmented);     // Mostra l'immagine segmentata
+    imshow("Working Image", img);       // Visualizza il quadtree disegnato
+    imshow("Output Image", output);     // Visualizza immagine segmentata
     waitKey(0);
 }

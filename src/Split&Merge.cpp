@@ -2,103 +2,102 @@
 using namespace cv;
 using namespace std;
 
-struct QNode {
-    Rect rect;
-    QNode *child[4] = {nullptr};
-    double mean, dev;
-    bool isLeaf = true;
+double smThreshold = 10;
+int minRegSize = 8;
+int mThreshold = 1;
 
-    QNode(Rect r) : rect(r) {}
+using namespace std;
+using namespace cv;
+
+class TNode {
+public:
+    Rect region;
+    vector<TNode *> regions = vector<TNode *>(4, nullptr);
+    vector<TNode *> merged;
+    vector<bool> isMerged = vector(4, false);
+    double stddev, mean, meanMerged;
+    TNode(Rect R) { region = R; };
 };
 
-QNode *split(Mat &img, Rect rect, double splitTH, int minSize) {
-    auto node = new QNode(rect);
-
-    Scalar mean, dev;
-    meanStdDev(img(rect), mean, dev);
+TNode *split(Mat &src, Rect R) {
+    auto node = new TNode(R);
+    Scalar stddev, mean;
+    meanStdDev(src(R), mean, stddev);
+    node->stddev = stddev[0];
     node->mean = mean[0];
-    node->dev = dev[0];
-
-    if (rect.width > minSize && node->dev > splitTH) {
-        node->isLeaf = false;
-        int halfW = rect.width / 2, halfH = rect.height / 2;
-
-        node->child[0] = split(img, Rect(rect.x, rect.y, halfW, halfH), splitTH, minSize);
-        node->child[1] = split(img, Rect(rect.x + halfW, rect.y, halfW, halfH), splitTH, minSize);
-        node->child[2] = split(img, Rect(rect.x, rect.y + halfH, halfW, halfH), splitTH, minSize);
-        node->child[3] = split(img, Rect(rect.x + halfW, rect.y + halfH, halfW, halfH), splitTH, minSize);
+    if (R.width > minRegSize && node->stddev > smThreshold) {
+        node->regions[0] = split(src, Rect(R.x, R.y, R.height / 2, R.width / 2));
+        node->regions[1] = split(src, Rect(R.x, R.y + R.width / 2, R.height / 2, R.width / 2));
+        node->regions[2] = split(src, Rect(R.x + R.height / 2, R.y, R.height / 2, R.width / 2));
+        node->regions[3] = split(src, Rect(R.x + R.height / 2, R.y + R.width / 2, R.height / 2, R.width / 2));
     }
-
-    rectangle(img, rect, Scalar(0));
+    rectangle(src, R, Scalar(0));
     return node;
 }
 
-void merge(QNode *node, double mergeTH) {
-    if (node->isLeaf) return;
-
-    for (int i = 0; i < 4; i++)
-        merge(node->child[i], mergeTH);
-
-    bool canMerge = true;
-    for (int i = 0; i < 4; i++) {
-        if (!node->child[i]->isLeaf) {
-            canMerge = false;
-            break;
-        }
-        if (abs(node->child[i]->mean - node->child[0]->mean) > mergeTH) {
-            canMerge = false;
-            break;
-        }
-    }
-
-    if (canMerge) {
-        node->isLeaf = true;
-        node->mean = 0;
+void merge(TNode *node) {
+    if (node->region.width > minRegSize && node->stddev > smThreshold) {
         for (int i = 0; i < 4; i++)
-            node->mean += node->child[i]->mean;
-        node->mean /= 4;
+            if (abs((int) node->regions[i]->mean - (int) node->regions[(i + 1) % 4]->mean) < mThreshold) {
+                node->merged.push_back(node->regions[i]);
+                node->isMerged[i] = true;
+                node->merged.push_back(node->regions[(i + 1) % 4]);
+                node->isMerged[(i + 1) % 4] = true;
+                if (abs((int) node->regions[(i + 1) % 4]->mean - (int) node->regions[(i + 2) % 4]->mean) < mThreshold) {
+                    node->merged.push_back(node->regions[(i + 2) % 4]);
+                    node->isMerged[(i + 2) % 4] = true;
+                    break;
+                }
+                if (abs((int) node->regions[(i + 3) % 4]->mean - (int) node->regions[i]->mean) < mThreshold) {
+                    node->merged.push_back(node->regions[(i + 3) % 4]);
+                    node->isMerged[(i + 3) % 4] = true;
+                    break;
+                }
+            }
+        for (int i = 0; i < 4; i++)
+            if (!node->isMerged[i])
+                merge(node->regions[i]);
     }
-}
-
-void segment(QNode *node, Mat &img) {
-    if (node->isLeaf)
-        img(node->rect) = (int) node->mean;
     else
-        for (int i = 0; i < 4; i++)
-            segment(node->child[i], img);
+        node->merged.push_back(node);
 }
 
-void splitAndMerge(Mat img, double splitTH, int minSize, double mergeTH) {
-    GaussianBlur(img, img, Size(5, 5), 0);
+void segment(TNode *src, Mat &dst) {
+    float val = 0;
+    for (auto node: src->merged)
+        val += node->mean;
+    val /= src->merged.size();
+    for (auto node: src->merged)
+        dst(node->region) = (int) val;
+    for (int i = 0; i < 4; i++)
+        if (!src->isMerged[i] && src->regions[i])
+            segment(src->regions[i], dst);
+}
 
-    int exponent = log(min(img.cols, img.rows)) / log(2);
-    int size = pow(2.0, (double) exponent);
-    img = img(Rect(0, 0, size, size)).clone();
+void splitAndMerge(Mat &src, Mat &output) {
+    int exponent = log(min(src.rows, src.cols)) / log(2);
+    int size = pow(2.0, double(exponent));
+    Mat img = src(Rect(0, 0, size, size)).clone();
 
-    Mat qtree = img.clone();
-    Mat segmented = img.clone();
+    GaussianBlur(img, img, Size(3, 3), 0, 0);
+    TNode *node = split(img, Rect(0, 0, img.rows, img.cols));
+    merge(node);
 
-    QNode *root = split(qtree, Rect(0, 0, size, size), splitTH, minSize);
+    output = src(Rect(0, 0, size, size)).clone();
+    segment(node, output);
 
-    merge(root, mergeTH);
-    segment(root, segmented);
-
-    imshow("Quad Tree", qtree);
-    imshow("Segmented", segmented);
+    imshow("Working Image", img);
+    imshow("Output Image", output);
     waitKey(0);
 }
 
 int main(int argc, char **argv) {
     const char *path = argc > 1 ? argv[1] : "../immagini/foglia.png";
-    Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
+    Mat dst, src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
 
     //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
     if (src.empty()) return -1;
 
-    double splitTH = 10;
-    int minSize = 8;
-    double mergeTH = 5;
-
-    splitAndMerge(src, splitTH, minSize, mergeTH);
+    splitAndMerge(src, dst);
     return 0;
 }

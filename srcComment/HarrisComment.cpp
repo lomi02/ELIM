@@ -71,7 +71,7 @@ Mat harris(Mat &input, float k, int threshTH) {
             if (R.at<uchar>(x, y) > 0)  // Se è un angolo
 
                 // Disegna un cerchio nero di raggio 3 pixel
-                circle(out, Point(y, x), 3 , Scalar(0), 1, 8, 0);
+                circle(out, Point(y, x), 3 , Scalar(0));
 
     return out;
 }

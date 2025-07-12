@@ -36,10 +36,10 @@ Mat otsu2k(Mat &input) {
         val /= totalPixels;
 
     // Passo 3: Calcolo probabilità cumulative (cumProb) e medie cumulative (cumMean)
-    vector<double> cumProb(256, 0.0), cumMean(256, 0.0);
+    vector cumProb(256, 0.0), cumMean(256, 0.0);
     cumProb[0] = hist[0];
     cumMean[0] = 0.0;
-    for (int i = 1; i < 256; ++i) {
+    for (int i = 1; i < 256; i++) {
         cumProb[i] = cumProb[i - 1] + hist[i];      // Probabilità cumulativa
         cumMean[i] = cumMean[i - 1] + i * hist[i];  // Media cumulativa ponderata
     }
@@ -50,8 +50,8 @@ Mat otsu2k(Mat &input) {
     vector th(2, 0);                    // Soglie ottimali (k1, k2)
 
     // Ricerca esaustiva delle soglie ottimali k1 e k2
-    for (int k1 = 1; k1 < 254; ++k1)
-        for (int k2 = k1 + 1; k2 < 255; ++k2) {
+    for (int k1 = 1; k1 < 254; k1++)
+        for (int k2 = k1 + 1; k2 < 255; k2++) {
             // Calcolo probabilità delle tre classi:
             // w0: Pixels <= k1 (sfondo)
             // w1: k1 < Pixels <= k2 (medio-piano)

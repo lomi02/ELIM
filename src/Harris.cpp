@@ -29,7 +29,7 @@ Mat harris(Mat &input, float k, int threshTH) {
     for (int x = 0; x < R.rows; x++)
         for (int y = 0; y < R.cols; y++)
             if (R.at<uchar>(x, y) > 0)
-                circle(out, Point(y, x), 3 , Scalar(0), 1, 8, 0);
+                circle(out, Point(y, x), 3 , Scalar(0));
 
     return out;
 }
@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
     if (src.empty()) return -1;
 
-    float k = 0.05;
+    float k = 0.017;
     int threshTH = 117;
     Mat dst = harris(src, k, threshTH);
 
