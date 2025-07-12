@@ -22,10 +22,11 @@ Mat region_growing(const Mat &input, int similTH, Point seed) {
     pixelQueue.push(seed);          // Aggiunge il seed alla coda
     visited.at<uchar>(seed) = 1;    // Marca il seed come visitato
 
-    // Definizione dei 4 vicini (connessione 4-way)
-    Point neighbors[] = {
-        Point(0, -1), Point(-1, 0),
-        Point(1, 0),  Point(0, 1)
+    // Definizione dei 8 vicini (connessione 8-way)
+    const Point neighbors[8] = {
+        Point(-1, -1), Point(-1, 0), Point(-1, 1),
+        Point(0, -1),                Point(0, 1),
+        Point(1, -1), Point(1, 0), Point(1, 1)
     };
 
     // Immagine di output: inizialmente tutta nera (0)

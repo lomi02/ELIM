@@ -9,9 +9,10 @@ Mat region_growing(const Mat &input, int similTH, Point seed) {
     pixelQueue.push(seed);
     visited.at<uchar>(seed) = 1;
 
-    Point neighbors[] = {
-        Point(0, -1), Point(-1, 0),
-        Point(1, 0), Point(0, 1)
+    const Point neighbors[8] = {
+        Point(-1, -1), Point(-1, 0), Point(-1, 1),
+        Point(0, -1),                Point(0, 1),
+        Point(1, -1), Point(1, 0), Point(1, 1)
     };
 
     Mat out = Mat::zeros(input.size(), CV_8U);
