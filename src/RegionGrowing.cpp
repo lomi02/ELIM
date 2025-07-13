@@ -3,16 +3,16 @@ using namespace std;
 using namespace cv;
 
 Mat region_growing(Mat &input, int similTH, Point seed) {
-    Mat img = Mat::zeros(input.size(), CV_8U);
+    Mat visited = Mat::zeros(input.size(), CV_8U);
 
     queue<Point> pixelQueue;
     pixelQueue.push(seed);
-    img.at<uchar>(seed) = 1;
+    visited.at<uchar>(seed) = 1;
 
     Point neighbors[8] = {
-        Point(-1, -1), Point(-1, 0), Point(-1, 1),
-        Point(0, -1),                Point(0, 1),
-        Point(1, -1), Point(1, 0), Point(1, 1)
+        Point(-1, -1),  Point(-1, 0),   Point(-1, 1),
+        Point(0, -1),                   Point(0, 1),
+        Point(1, -1),   Point(1, 0),    Point(1, 1)
     };
 
     Mat out = Mat::zeros(input.size(), CV_8U);
@@ -26,9 +26,9 @@ Mat region_growing(Mat &input, int similTH, Point seed) {
 
             if (neighPx.x >= 0 && neighPx.x < input.cols &&
                 neighPx.y >= 0 && neighPx.y < input.rows &&
-                img.at<uchar>(neighPx) == 0 &&
+                visited.at<uchar>(neighPx) == 0 &&
                 abs(input.at<uchar>(currentPx) - input.at<uchar>(neighPx)) <= similTH) {
-                img.at<uchar>(neighPx) = 1;
+                visited.at<uchar>(neighPx) = 1;
                 pixelQueue.push(neighPx);
             }
         }

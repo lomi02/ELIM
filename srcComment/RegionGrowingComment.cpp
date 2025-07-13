@@ -16,18 +16,18 @@ using namespace cv;
 Mat region_growing(Mat &input, int similTH, Point seed) {
 
     // Crea una matrice per tenere traccia dei pixel già visitati
-    Mat img = Mat::zeros(input.size(), CV_8U);
+    Mat visited = Mat::zeros(input.size(), CV_8U);
 
     // Coda per la BFS (Breadth-First Search)
     queue<Point> pixelQueue;
     pixelQueue.push(seed);          // Aggiunge il seed alla coda
-    img.at<uchar>(seed) = 1;    // Marca il seed come visitato
+    visited.at<uchar>(seed) = 1;    // Marca il seed come visitato
 
     // Definizione dei 8 vicini (connessione 8-way)
     Point neighbors[8] = {
-        Point(-1, -1), Point(-1, 0), Point(-1, 1),
-        Point(0, -1),                Point(0, 1),
-        Point(1, -1), Point(1, 0), Point(1, 1)
+        Point(-1, -1),  Point(-1, 0),   Point(-1, 1),
+        Point(0, -1),                   Point(0, 1),
+        Point(1, -1),   Point(1, 0),    Point(1, 1)
     };
 
     // Immagine di output: inizialmente tutta nera (0)
@@ -44,7 +44,7 @@ Mat region_growing(Mat &input, int similTH, Point seed) {
         out.at<uchar>(currentPx) = 255;
 
         // Scorre tutti i vicini
-        for (Point &offset : neighbors) {
+        for (Point &offset: neighbors) {
             Point neighPx = currentPx + offset;
 
             // Verifica le condizioni per includere il vicino:
@@ -53,10 +53,10 @@ Mat region_growing(Mat &input, int similTH, Point seed) {
             // 3. La differenza di intensità deve essere <= soglia
             if (neighPx.x >= 0 && neighPx.x < input.cols &&
                 neighPx.y >= 0 && neighPx.y < input.rows &&
-                img.at<uchar>(neighPx) == 0 &&
+                visited.at<uchar>(neighPx) == 0 &&
                 abs(input.at<uchar>(currentPx) - input.at<uchar>(neighPx)) <= similTH) {
 
-                img.at<uchar>(neighPx) = 1;     // Marca il vicino come visitato
+                visited.at<uchar>(neighPx) = 1;     // Marca il vicino come visitato
                 pixelQueue.push(neighPx);           // Aggiunge alla coda per processarlo
             }
         }
