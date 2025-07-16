@@ -28,7 +28,8 @@ Mat kmeans(Mat &input, int k) {
     for (int iter = 0; iter < 50; iter++) {
 
         // Pulisce tutti i cluster per la nuova iterazione
-        for (auto &cluster: clusters) cluster.clear();
+        for (auto &cluster: clusters)
+            cluster.clear();
 
         // Assegna ogni pixel al centroide più vicino
         for (int x = 0; x < img.rows; x++)
@@ -47,11 +48,12 @@ Mat kmeans(Mat &input, int k) {
         // Aggiorna i centroidi calcolando la media dei pixel nei cluster
         bool changed = false;
         for (int i = 0; i < k; i++) {
-            if (clusters[i].empty()) continue;
+            if (clusters[i].empty())
+                continue;
 
             // Calcola la somma dei valori dei pixel nel cluster corrente
             int sum = 0;
-            for (const Point &p: clusters[i])
+            for (Point &p: clusters[i])
                 sum += img.at<uchar>(p.x, p.y);
 
             // Calcola il nuovo centroide come media e verifica se è cambiato
@@ -70,7 +72,7 @@ Mat kmeans(Mat &input, int k) {
     // Crea l'immagine di output con i pixel sostituiti dai valori dei centroidi
     Mat out = img.clone();
     for (int i = 0; i < k; i++)
-        for (const Point &p: clusters[i])
+        for (Point &p: clusters[i])
             out.at<uchar>(p.x, p.y) = centroids[i];
 
     return out;

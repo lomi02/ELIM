@@ -16,7 +16,8 @@ Mat kmeans(Mat &input, int k) {
     vector<vector<Point> > clusters(k);
 
     for (int iter = 0; iter < 50; iter++) {
-        for (auto &cluster: clusters) cluster.clear();
+        for (auto &cluster: clusters)
+            cluster.clear();
 
         for (int x = 0; x < img.rows; x++)
             for (int y = 0; y < img.cols; y++) {
@@ -50,7 +51,7 @@ Mat kmeans(Mat &input, int k) {
 
     Mat out = img.clone();
     for (int i = 0; i < k; i++)
-        for (const Point &p: clusters[i])
+        for (Point &p: clusters[i])
             out.at<uchar>(p.x, p.y) = centroids[i];
 
     return out;
