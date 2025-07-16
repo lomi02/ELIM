@@ -34,8 +34,8 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
 
     // Calcolo della magnitudo
     Mat Dx2, Dy2, magnitude;
-    pow(Dx, 2, Dx2);
-    pow(Dy, 2, Dy2);
+    multiply(Dx, Dx, Dx2);
+    multiply(Dy, Dy, Dy2);
     sqrt(Dx2 + Dy2, magnitude);
 
     // Normalizzazione della magnitudo nell'intervallo 0-255
@@ -49,8 +49,8 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
     Mat NMS = Mat::zeros(magnitude.size(), CV_8U);
 
     // Scansione dell'immagine (escludendo i bordi di 1 pixel)
-    for (int x = 1; x < magnitude.rows - 1; x++)
-        for (int y = 1; y < magnitude.cols - 1; y++) {
+    for (int x = 1; x < magnitude.rows; x++)
+        for (int y = 1; y < magnitude.cols; y++) {
 
             // Normalizza l'angolo del gradiente in [0,180] con offset 22.5° per discretizzare
             // le 4 direzioni principali (0°, 45°, 90°, 135°) usate nella soppressione non-massima
@@ -93,8 +93,8 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
 
     // Passo 4: Sogliatura con isteresi
     Mat out = Mat::zeros(NMS.size(), CV_8U);
-    for (int x = 0; x < NMS.rows; x++)
-        for (int y = 0; y < NMS.cols; y++)
+    for (int x = 1; x < NMS.rows; x++)
+        for (int y = 1; y < NMS.cols; y++)
 
             // Se il pixel supera la soglia alta, è un bordo forte
             if (NMS.at<uchar>(x, y) > cannyLTH && NMS.at<uchar>(x, y) < cannyHTH) {
@@ -104,7 +104,7 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
                 for (int nx = -1; nx <= 1; nx++)
                     for (int ny = -1; ny <= 1; ny++)
                         if (NMS.at<uchar>(x + nx, y + ny) > cannyLTH && NMS.at<uchar>(x + nx, y + ny) < cannyHTH)
-                            out.at<uchar>(x, y) = 255;
+                            out.at<uchar>(x + nx, y + ny) = 255;
             }
     return out;
 }
