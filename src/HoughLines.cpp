@@ -5,7 +5,7 @@ using namespace cv;
 Mat hough_lines(Mat &input, int houghTH) {
     Mat img = input.clone();
 
-    GaussianBlur(input, img, Size(5, 5), 0.5, 0.5);
+    GaussianBlur(img, img, Size(5, 5), 0.5, 0.5);
     Canny(img, img, 50, 150);
 
     int diag = cvRound(hypot(img.rows, img.cols));
