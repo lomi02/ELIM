@@ -3,24 +3,25 @@
 using namespace cv;
 using namespace std;
 
-Mat otsu2k(Mat &input, int blurSize = 3, float blurSigma = 0.5) {
+Mat otsu2k(Mat &input) {
     Mat img = input.clone();
-    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma, blurSigma);
+    GaussianBlur(img, img, Size(3, 3), 0.5, 0.5);
 
     vector hist(256, 0.0);
     for (int x = 0; x < img.rows; x++)
         for (int y = 0; y < img.cols; y++)
             hist[img.at<uchar>(x, y)]++;
 
-    double totalPixels = img.rows * img.cols;
-    for (double &val: hist) val /= totalPixels;
+    double tot = img.rows * img.cols;
+    for (double &val: hist)
+        val /= tot;
 
-    double globalMean = 0.0;
+    double gMean = 0.0;
     for (int i = 0; i < 256; i++)
-        globalMean += i * hist[i];
+        gMean += i * hist[i];
 
     double maxVar = 0.0;
-    int t1 = 0, t2 = 0;
+    int bestTH1 = 0, bestTH2 = 0;
 
     for (int i = 0; i < 254; i++) {
         double w0 = 0, m0 = 0;
@@ -39,17 +40,17 @@ Mat otsu2k(Mat &input, int blurSize = 3, float blurSigma = 0.5) {
             }
 
             double w2 = 1.0 - w0 - w1;
-            double m2 = globalMean - m0 - m1;
+            double m2 = gMean - m0 - m1;
 
             if (w0 > 0 && w1 > 0 && w2 > 0) {
-                double var = w0 * pow(m0 / w0 - globalMean, 2) +
-                             w1 * pow(m1 / w1 - globalMean, 2) +
-                             w2 * pow(m2 / w2 - globalMean, 2);
+                double var = w0 * pow(m0 / w0 - gMean, 2) +
+                             w1 * pow(m1 / w1 - gMean, 2) +
+                             w2 * pow(m2 / w2 - gMean, 2);
 
                 if (var > maxVar) {
                     maxVar = var;
-                    t1 = i;
-                    t2 = j;
+                    bestTH1 = i;
+                    bestTH2 = j;
                 }
             }
         }
@@ -59,9 +60,9 @@ Mat otsu2k(Mat &input, int blurSize = 3, float blurSigma = 0.5) {
     for (int x = 0; x < img.rows; x++)
         for (int y = 0; y < img.cols; y++) {
             uchar pixel = img.at<uchar>(x, y);
-            if (pixel >= t2)
+            if (pixel >= bestTH2)
                 out.at<uchar>(x, y) = 255;
-            else if (pixel >= t1)
+            else if (pixel >= bestTH1)
                 out.at<uchar>(x, y) = 127;
         }
 
@@ -72,7 +73,6 @@ int main(int argc, char **argv) {
     const char *path = argc > 1 ? argv[1] : "../immagini/fiore.png";
     Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
 
-    //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
     if (src.empty()) return -1;
 
     Mat dst = otsu2k(src);

@@ -12,31 +12,31 @@ Mat otsu(Mat &input) {
         for (int y = 0; y < img.cols; y++)
             hist[img.at<uchar>(x, y)]++;
 
-    double totalPixels = img.rows * img.cols;
-    for (double &val : hist)
-        val /= totalPixels;
+    double tot = img.rows * img.cols;
+    for (double &val: hist)
+        val /= tot;
 
-    double globalMean = 0.0;
+    double gMean = 0.0;
     for (int i = 0; i < 256; i++)
-        globalMean += i * hist[i];
+        gMean += i * hist[i];
 
-    double prob = 0.0;
-    double cumMean = 0.0;
+    double w = 0.0;
+    double cMean = 0.0;
     double maxVar = 0.0;
-    int bestThreshold = 0;
+    int bestTH = 0;
 
     for (int k = 0; k < 256; k++) {
-        prob += hist[k];
-        cumMean += k * hist[k];
-        double betweenVar = pow(globalMean * prob - cumMean, 2) / (prob * (1.0 - prob));
-        if (betweenVar > maxVar) {
-            maxVar = betweenVar;
-            bestThreshold = k;
+        w += hist[k];
+        cMean += k * hist[k];
+        double var = pow(gMean * w - cMean, 2) / (w * (1.0 - w));
+        if (var > maxVar) {
+            maxVar = var;
+            bestTH = k;
         }
     }
 
     Mat out;
-    threshold(img, out, bestThreshold, 255, THRESH_BINARY);
+    threshold(img, out, bestTH, 255, THRESH_BINARY);
 
     return out;
 }
@@ -45,7 +45,6 @@ int main(int argc, char **argv) {
     const char *path = argc > 1 ? argv[1] : "../immagini/fiore.png";
     Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
 
-    //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
     if (src.empty()) return -1;
 
     Mat dst = otsu(src);
