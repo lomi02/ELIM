@@ -16,18 +16,15 @@ using namespace cv;
  * 5. Ricerca le due soglie (t1, t2) che massimizzano la varianza inter-classe
  * 6. Classifica i pixel in tre livelli in base alle soglie trovate
  *
- * @param input      Immagine in scala di grigi
- * @param blurSize   Dimensione del kernel gaussiano per la sfocatura (default 3)
- * @param blurSigma  Deviazione standard per la sfocatura gaussiana (default 0.5)
- *
- * @return Immagine segmentata con tre livelli di intensità: 0, 127, 255
+ * @param input     Immagine in scala di grigi
+ * @return          Immagine segmentata con tre livelli di intensità: 0, 127, 255
  */
-Mat otsu2k(Mat &input, int blurSize = 3, float blurSigma = 0.5) {
+Mat otsu2k(Mat &input) {
     Mat img = input.clone();
 
     // Passo 1: Applicazione del filtro gaussiano
     // Riduce il rumore e le variazioni locali per una sogliatura più stabile
-    GaussianBlur(img, img, Size(blurSize, blurSize), blurSigma, blurSigma);
+    GaussianBlur(img, img, Size(3, 3), 0.5, 0.5);
 
     // Passo 2: Calcolo dell'istogramma dei livelli di grigio
     // L'istogramma contiene la frequenza di ogni livello (0–255)

@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
 
     Mat dst = otsu(src);
 
-    imshow("Otsu2k", dst);
+    imshow("Otsu", dst);
     waitKey(0);
 
     return 0;
