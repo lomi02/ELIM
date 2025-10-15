@@ -1,6 +1,6 @@
 #include <opencv2/opencv.hpp>
-using namespace cv;
 using namespace std;
+using namespace cv;
 
 Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
     Mat img = input.clone();
