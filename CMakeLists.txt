@@ -8,6 +8,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_executable(AlgoritmiEsame src/Split&Merge.cpp)
+add_executable(AlgoritmiEsame Blackboard.cpp)
 
 target_link_libraries(AlgoritmiEsame ${OpenCV_LIBS})
