@@ -3,77 +3,83 @@ using namespace std;
 using namespace cv;
 
 /**
- * Applica l'algoritmo di clustering k-means a un'immagine in scala di grigi.
+ * Applica l'algoritmo K-means per segmentare un'immagine in scala di grigi in k cluster.
  *
- * @param input    Immagine in scala di grigi in input da clusterizzare.
- * @param k        Numero di cluster da creare.
- * @return         Immagine clusterizzata in scala di grigi.
+ * Questa funzione esegue i seguenti passaggi:
+ * 1. Inizializza casualmente k centroidi scegliendo pixel dell'immagine
+ * 2. Assegna ogni pixel al cluster il cui centroide è più vicino (minima distanza in intensità)
+ * 3. Aggiorna i centroidi calcolando la media dei pixel assegnati a ciascun cluster
+ * 4. Ripete i passi 2-3 fino a convergenza o massimo numero di iterazioni
+ * 5. Assegna a ciascun pixel il valore del centroide del cluster di appartenenza
+ *
+ * @param input  Immagine in input (scala di grigi)
+ * @param k      Numero di cluster
+ *
+ * @return Immagine segmentata secondo i k cluster
  */
 Mat kmeans(Mat &input, int k) {
     Mat img = input.clone();
-    srand(time(nullptr));
 
-    // Inizializza i centroidi in modo casuale selezionando pixel a caso
+    // Inizializzazione casuale
+    srand(static_cast<unsigned>(time(nullptr)));
+
+    // Passo 1: Inizializzazione dei centroidi scegliendo pixel casuali
     vector<uchar> centroids(k);
     for (int i = 0; i < k; i++) {
         int x = rand() % img.rows;
         int y = rand() % img.cols;
-        centroids[i] = img.at<uchar>(x, y);
+        centroids[i] = img.at<uchar>(x, y); // Valore del pixel come centroide iniziale
     }
 
-    // Inizializza i cluster per contenere i punti assegnati a ciascun centroide
+    // Cluster: vettore di punti assegnati a ciascun centroide
     vector<vector<Point> > clusters(k);
 
-    // Ciclo principale: assegna i punti e aggiorna i centroidi
-    for (int iter = 0; iter < 50; iter++) {
+    // Passo 2-4: Iterazioni principali dell'algoritmo K-means
+    for (int iter = 0; iter < 50; iter++) { // Massimo 50 iterazioni
+        // Svuota i cluster dall'iterazione precedente
+        for (size_t i = 0; i < clusters.size(); i++)
+            clusters[i].clear();
 
-        // Pulisce tutti i cluster per la nuova iterazione
-        for (auto &cluster: clusters)
-            cluster.clear();
-
-        // Assegna ogni pixel al centroide più vicino
-        for (int x = 0; x < img.rows; x++)
+        // Assegnazione dei pixel al cluster più vicino
+        for (int x = 0; x < img.rows; x++) {
             for (int y = 0; y < img.cols; y++) {
                 uchar pixel = img.at<uchar>(x, y);
 
-                // Trova il centroide più vicino al pixel corrente
                 int best = 0;
-                for (int i = 1; i < k; i++)
-                    if (abs(centroids[i] - pixel) < abs(centroids[best] - pixel))
-                        best = i;
-
+                for (int i = 1; i < k; i++) {
+                    if (abs(static_cast<int>(centroids[i]) - pixel) <
+                        abs(static_cast<int>(centroids[best]) - pixel))
+                        best = i; // Trova il centroide più vicino
+                }
                 clusters[best].push_back(Point(x, y));
             }
+        }
 
-        // Aggiorna i centroidi calcolando la media dei pixel nei cluster
-        bool changed = false;
+        // Aggiornamento dei centroidi
+        bool changed = false; // Flag per controllare convergenza
         for (int i = 0; i < k; i++) {
             if (clusters[i].empty())
                 continue;
 
-            // Calcola la somma dei valori dei pixel nel cluster corrente
             int sum = 0;
-            for (Point &p: clusters[i])
-                sum += img.at<uchar>(p.x, p.y);
+            for (size_t j = 0; j < clusters[i].size(); j++)
+                sum += img.at<uchar>(clusters[i][j].x, clusters[i][j].y);
 
-            // Calcola il nuovo centroide come media e verifica se è cambiato
-            uchar newCentroid = sum / clusters[i].size();
-            if (abs(newCentroid - centroids[i]) > 0.01)
-                changed = true;
-
+            uchar newCentroid = static_cast<uchar>(sum / clusters[i].size()); // Media dei pixel
+            if (abs(static_cast<int>(newCentroid) - centroids[i]) > 0)
+                changed = true; // Se cambia almeno un centroide, continua iterazioni
             centroids[i] = newCentroid;
         }
 
-        // Se nessun centroide è cambiato, l'algoritmo è converso
-        if (!changed)
+        if (!changed) // Convergenza raggiunta
             break;
     }
 
-    // Crea l'immagine di output con i pixel sostituiti dai valori dei centroidi
+    // Passo 5: Assegna a ciascun pixel il valore del centroide del cluster
     Mat out = img.clone();
     for (int i = 0; i < k; i++)
-        for (Point &p: clusters[i])
-            out.at<uchar>(p.x, p.y) = centroids[i];
+        for (size_t j = 0; j < clusters[i].size(); j++)
+            out.at<uchar>(clusters[i][j].x, clusters[i][j].y) = centroids[i];
 
     return out;
 }

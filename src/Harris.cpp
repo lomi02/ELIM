@@ -29,17 +29,13 @@ Mat harris(Mat &input, float k, int threshTH) {
     for (int x = 0; x < R.rows; x++)
         for (int y = 0; y < R.cols; y++)
             if (R.at<uchar>(x, y) > 0)
-                circle(out, Point(y, x), 3 , Scalar(0));
+                circle(out, Point(y, x), 3, Scalar(0));
 
     return out;
 }
 
-int main(int argc, char **argv) {
-    const char *path = argc > 1 ? argv[1] : "../immagini/foglia.png";
-    Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
-
-    //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
-    if (src.empty()) return -1;
+int main() {
+    Mat src = imread("../immagini/foglia.png", IMREAD_GRAYSCALE);
 
     float k = 0.017;
     int threshTH = 117;

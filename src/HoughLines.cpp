@@ -40,12 +40,8 @@ Mat hough_lines(Mat &input, int houghTH) {
     return out;
 }
 
-int main(int argc, char **argv) {
-    const char *path = argc > 1 ? argv[1] : "../immagini/strada.png";
-    Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
-
-    //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
-    if (src.empty()) return -1;
+int main() {
+    Mat src = imread("../immagini/strada.png", IMREAD_GRAYSCALE);
 
     int houghTH = 150;
     Mat dst = hough_lines(src, houghTH);

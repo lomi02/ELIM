@@ -3,105 +3,99 @@ using namespace std;
 using namespace cv;
 
 /**
- * Applica una versione estesa dell'algoritmo di Otsu a due soglie (Otsu a 3 classi).
+ * Applica una versione estesa del metodo di Otsu per segmentare un'immagine in tre classi.
  *
- * Questa funzione suddivide l'immagine in tre classi d’intensità (ad esempio: sfondo, livello intermedio e oggetti chiari),
- * determinando due soglie ottimali t1 e t2 che massimizzano la varianza tra-classi.
+ * Questa funzione esegue i seguenti passaggi:
+ * 1. Riduce il rumore dell'immagine tramite filtro gaussiano
+ * 2. Calcola l'istogramma normalizzato dei livelli di grigio
+ * 3. Calcola la media globale dei pixel
+ * 4. Determina le due soglie ottimali massimizzando la varianza inter-classi (3 classi)
+ * 5. Assegna i pixel a tre livelli di intensità: 0, 127, 255
  *
- * La procedura segue questi passaggi:
- * 1. Applica una sfocatura gaussiana per ridurre il rumore
- * 2. Calcola l'istogramma dei livelli di grigio
- * 3. Normalizza l'istogramma in modo che la somma sia 1
- * 4. Calcola la media globale dell'immagine
- * 5. Ricerca le due soglie (t1, t2) che massimizzano la varianza inter-classe
- * 6. Classifica i pixel in tre livelli in base alle soglie trovate
+ * @param input  Immagine in input (scala di grigi)
  *
- * @param input     Immagine in scala di grigi
- * @return          Immagine segmentata con tre livelli di intensità: 0, 127, 255
+ * @return Immagine segmentata in tre classi usando le due soglie di Otsu
  */
 Mat otsu2k(Mat &input) {
     Mat img = input.clone();
 
-    // Passo 1: Applicazione del filtro gaussiano
-    // Riduce il rumore e le variazioni locali per una sogliatura più stabile
+    // Passo 1: Riduzione del rumore tramite filtro gaussiano 3x3
     GaussianBlur(img, img, Size(3, 3), 0.5, 0.5);
 
-    // Passo 2: Calcolo dell'istogramma dei livelli di grigio
-    // L'istogramma contiene la frequenza di ogni livello (0–255)
-    vector hist(256, 0.0);
+    // Passo 2: Calcolo dell'istogramma normalizzato dei pixel
+    vector<double> hist(256, 0.0);
     for (int x = 0; x < img.rows; x++)
         for (int y = 0; y < img.cols; y++)
-            hist[img.at<uchar>(x, y)]++;
+            hist[img.at<uchar>(x, y)]++; // Incrementa il conteggio del livello di grigio
 
-    // Passo 3: Normalizzazione dell'istogramma
-    // Trasforma le frequenze in probabilità (somma = 1)
-    double totalPixels = img.rows * img.cols;
-    for (double &val : hist)
-        val /= totalPixels;
-
-    // Passo 4: Calcolo della media globale dell'immagine
-    // μT = Σ (i * p(i)) per i = 0...255
-    double globalMean = 0.0;
+    double tot = img.rows * img.cols;
     for (int i = 0; i < 256; i++)
-        globalMean += i * hist[i];
+        hist[i] /= tot; // Normalizzazione in [0,1]
 
-    // Passo 5: Ricerca esaustiva delle due soglie ottimali t1 e t2
-    // Si esplorano tutte le combinazioni (t1, t2) tali che t1 < t2
+    // Passo 3: Calcolo della media globale dei pixel
+    double gMean = 0.0;
+    for (int i = 0; i < 256; i++)
+        gMean += i * hist[i];
+
+    // Passo 4: Ricerca delle due soglie ottimali massimizzando la varianza inter-classi
     double maxVar = 0.0;
-    int t1 = 0, t2 = 0;
+    int bestTH1 = 0, bestTH2 = 0;
 
-    for (int i = 0; i < 254; i++) {  // t1
-        double w0 = 0, m0 = 0;
+    // Ciclo su tutte le possibili coppie di soglie t1 < t2
+    for (int t1 = 0; t1 < 255; t1++)
+        for (int t2 = t1 + 1; t2 < 256; t2++) {
+            double w0 = 0, w1 = 0, w2 = 0;        // Pesature delle tre classi
+            double sum0 = 0, sum1 = 0, sum2 = 0;  // Somma dei valori dei pixel per ciascuna classe
 
-        // Classe 1: livelli [0, t1]
-        for (int k = 0; k <= i; k++) {
-            w0 += hist[k];        // Peso (probabilità totale)
-            m0 += k * hist[k];    // Somma pesata delle intensità
-        }
-
-        for (int j = i + 1; j < 255; j++) {  // t2
-            double w1 = 0, m1 = 0;
-
-            // Classe 2: livelli [t1+1, t2]
-            for (int k = i + 1; k <= j; k++) {
-                w1 += hist[k];
-                m1 += k * hist[k];
+            // Classe 0: pixel <= t1
+            for (int i = 0; i <= t1; i++) {
+                w0 += hist[i];
+                sum0 += i * hist[i];
             }
 
-            // Classe 3: livelli [t2+1, 255]
-            double w2 = 1.0 - w0 - w1;     // Peso della terza classe
-            double m2 = globalMean - m0 - m1;  // Somma pesata residua
+            // Classe 1: t1 < pixel <= t2
+            for (int i = t1 + 1; i <= t2; i++) {
+                w1 += hist[i];
+                sum1 += i * hist[i];
+            }
 
-            // Calcolo della varianza inter-classe
-            // σ_B² = Σ wi * (μi - μT)² per i = 1..3
+            // Classe 2: pixel > t2
+            for (int i = t2 + 1; i < 256; i++) {
+                w2 += hist[i];
+                sum2 += i * hist[i];
+            }
+
+            // Calcolo della varianza inter-classi solo se tutte le classi hanno peso > 0
             if (w0 > 0 && w1 > 0 && w2 > 0) {
-                double var = w0 * pow(m0 / w0 - globalMean, 2) +
-                             w1 * pow(m1 / w1 - globalMean, 2) +
-                             w2 * pow(m2 / w2 - globalMean, 2);
+                double mean0 = sum0 / w0;
+                double mean1 = sum1 / w1;
+                double mean2 = sum2 / w2;
 
-                // Aggiornamento dei valori ottimali se la varianza è maggiore
+                double var = w0 * pow(mean0 - gMean, 2) +
+                             w1 * pow(mean1 - gMean, 2) +
+                             w2 * pow(mean2 - gMean, 2);
+
+                // Aggiornamento delle soglie ottimali
                 if (var > maxVar) {
                     maxVar = var;
-                    t1 = i;
-                    t2 = j;
+                    bestTH1 = t1;
+                    bestTH2 = t2;
                 }
             }
         }
-    }
 
-    // Passo 6: Applicazione delle soglie all'immagine
-    // Classifica i pixel in tre classi in base alle soglie trovate
-    Mat out = Mat::zeros(img.size(), CV_8U);
-    for (int x = 0; x < img.rows; x++)
-        for (int y = 0; y < img.cols; y++) {
-            uchar pixel = img.at<uchar>(x, y);
-            if (pixel >= t2)
-                out.at<uchar>(x, y) = 255;  // Classe 3: regione più chiara
-            else if (pixel >= t1)
-                out.at<uchar>(x, y) = 127;  // Classe 2: regione intermedia
-            // Altrimenti rimane 0 (classe 1: regione scura)
+    // Passo 5: Assegnazione dei pixel alle tre classi
+    Mat out = img.clone();
+    for (int x = 0; x < out.rows; x++)
+        for (int y = 0; y < out.cols; y++) {
+            uchar val = out.at<uchar>(x, y);
+            if (val <= bestTH1)
+                out.at<uchar>(x, y) = 0;      // Classe 0
+            else if (val <= bestTH2)
+                out.at<uchar>(x, y) = 127;    // Classe 1
+            else
+                out.at<uchar>(x, y) = 255;    // Classe 2
         }
 
-    // Restituisce l'immagine segmentata in tre livelli
     return out;
 }

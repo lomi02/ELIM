@@ -1,55 +1,73 @@
 #include <opencv2/opencv.hpp>
-using namespace std;
+#include <stack>
 using namespace cv;
+using namespace std;
 
-Mat region_growing(Mat &input, int similTH, Point seed) {
-    Mat visited = Mat::zeros(input.size(), CV_8U);
+Mat regionGrowing(Mat &input) {
+    Mat src = input.clone();
 
-    queue<Point> pixelQueue;
-    pixelQueue.push(seed);
-    visited.at<uchar>(seed) = 1;
+    int similarityThreshold = 5;
+    double minAreaFactor = 0.01;
+    uchar maxLabels = 100;
 
-    Point neighbors[8] = {
-        Point(-1, -1),  Point(-1, 0),   Point(-1, 1),
-        Point(0, -1),                   Point(0, 1),
-        Point(1, -1),   Point(1, 0),    Point(1, 1)
+    int minArea = int(minAreaFactor * src.rows * src.cols);
+    Mat labels = Mat::zeros(src.rows, src.cols, CV_8U);
+    Mat regionMask = Mat::zeros(src.rows, src.cols, CV_8U);
+    uchar currentLabel = 1;
+
+    const Point neighbors[8] = {
+        Point(1, 0), Point(1, -1), Point(0, -1), Point(-1, -1),
+        Point(-1, 0), Point(-1, 1), Point(0, 1), Point(1, 1)
     };
 
-    Mat out = Mat::zeros(input.size(), CV_8U);
-    while (!pixelQueue.empty()) {
-        Point currentPx = pixelQueue.front();
-        pixelQueue.pop();
-        out.at<uchar>(currentPx) = 255;
+    for (int x = 0; x < src.cols; x++) {
+        for (int y = 0; y < src.rows; y++) {
+            Point seed(x, y);
+            if (labels.at<uchar>(seed) != 0) continue;
 
-        for (Point &offset: neighbors) {
-            Point neighPx = currentPx + offset;
+            stack<Point> points;
+            points.push(seed);
+            regionMask.setTo(0);
 
-            if (neighPx.x >= 0 && neighPx.x < input.cols &&
-                neighPx.y >= 0 && neighPx.y < input.rows &&
-                visited.at<uchar>(neighPx) == 0 &&
-                abs(input.at<uchar>(currentPx) - input.at<uchar>(neighPx)) <= similTH) {
-                visited.at<uchar>(neighPx) = 1;
-                pixelQueue.push(neighPx);
+            while (!points.empty()) {
+                Point p = points.top();
+                points.pop();
+                regionMask.at<uchar>(p) = 1;
+                uchar centerVal = src.at<uchar>(p);
+
+                for (int i = 0; i < 8; i++) {
+                    Point q = p + neighbors[i];
+                    if (q.x < 0 || q.x >= src.cols || q.y < 0 || q.y >= src.rows)
+                        continue;
+                    if (labels.at<uchar>(q) || regionMask.at<uchar>(q))
+                        continue;
+                    uchar neighVal = src.at<uchar>(q);
+                    if (abs(int(centerVal) - int(neighVal)) < similarityThreshold) {
+                        regionMask.at<uchar>(q) = 1;
+                        points.push(q);
+                    }
+                }
+            }
+
+            int regionArea = int(sum(regionMask)[0]);
+            if (regionArea > minArea) {
+                labels += regionMask * currentLabel;
+                if (++currentLabel > maxLabels) return labels;
+            } else {
+                labels += regionMask * 255;
             }
         }
     }
-
-    return out;
+    return labels;
 }
 
-int main(int argc, char **argv) {
-    const char *path = argc > 1 ? argv[1] : "../immagini/splash.png";
-    Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
+int main() {
+    Mat src = imread("../immagini/splash.png", IMREAD_GRAYSCALE);
 
-    //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
-    if (src.empty()) return -1;
-
-    Point seed(src.cols / 2, src.rows / 2);
-    int similTH = 10;
-
-    Mat dst = region_growing(src, similTH, seed);
+    Mat dst = regionGrowing(src);
 
     imshow("RegionGrowing", dst);
     waitKey(0);
+
     return 0;
 }

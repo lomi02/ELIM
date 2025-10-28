@@ -59,12 +59,8 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
     return out;
 }
 
-int main(int argc, char **argv) {
-    const char *path = argc > 1 ? argv[1] : "../immagini/fiore.png";
-    Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
-
-    //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
-    if (src.empty()) return -1;
+int main() {
+    Mat src = imread("../immagini/fiore.png", IMREAD_GRAYSCALE);
 
     int cannyLTH = 20;
     int cannyHTH = 150;

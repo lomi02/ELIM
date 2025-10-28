@@ -4,7 +4,7 @@ using namespace cv;
 
 Mat kmeans(Mat &input, int k) {
     Mat img = input.clone();
-    srand(time(nullptr));
+    srand(static_cast<unsigned>(time(nullptr)));
 
     vector<uchar> centroids(k);
     for (int i = 0; i < k; i++) {
@@ -16,19 +16,22 @@ Mat kmeans(Mat &input, int k) {
     vector<vector<Point> > clusters(k);
 
     for (int iter = 0; iter < 50; iter++) {
-        for (auto &cluster: clusters)
-            cluster.clear();
+        for (size_t i = 0; i < clusters.size(); i++)
+            clusters[i].clear();
 
-        for (int x = 0; x < img.rows; x++)
+        for (int x = 0; x < img.rows; x++) {
             for (int y = 0; y < img.cols; y++) {
                 uchar pixel = img.at<uchar>(x, y);
 
                 int best = 0;
-                for (int i = 1; i < k; i++)
-                    if (abs(centroids[i] - pixel) < abs(centroids[best] - pixel))
+                for (int i = 1; i < k; i++) {
+                    if (abs(static_cast<int>(centroids[i]) - pixel) <
+                        abs(static_cast<int>(centroids[best]) - pixel))
                         best = i;
+                }
                 clusters[best].push_back(Point(x, y));
             }
+        }
 
         bool changed = false;
         for (int i = 0; i < k; i++) {
@@ -36,11 +39,11 @@ Mat kmeans(Mat &input, int k) {
                 continue;
 
             int sum = 0;
-            for (Point &p: clusters[i])
-                sum += img.at<uchar>(p.x, p.y);
+            for (size_t j = 0; j < clusters[i].size(); j++)
+                sum += img.at<uchar>(clusters[i][j].x, clusters[i][j].y);
 
-            uchar newCentroid = sum / clusters[i].size();
-            if (abs(newCentroid - centroids[i]) > 0.01)
+            uchar newCentroid = static_cast<uchar>(sum / clusters[i].size());
+            if (abs(static_cast<int>(newCentroid) - centroids[i]) > 0)
                 changed = true;
             centroids[i] = newCentroid;
         }
@@ -51,18 +54,14 @@ Mat kmeans(Mat &input, int k) {
 
     Mat out = img.clone();
     for (int i = 0; i < k; i++)
-        for (Point &p: clusters[i])
-            out.at<uchar>(p.x, p.y) = centroids[i];
+        for (size_t j = 0; j < clusters[i].size(); j++)
+            out.at<uchar>(clusters[i][j].x, clusters[i][j].y) = centroids[i];
 
     return out;
 }
 
-int main(int argc, char **argv) {
-    const char *path = argc > 1 ? argv[1] : "../immagini/splash.png";
-    Mat src = imread(samples::findFile(path), IMREAD_GRAYSCALE);
-
-    //Mat src = imread(argv[1],IMREAD_GRAYSCALE);
-    if (src.empty()) return -1;
+int main() {
+    Mat src = imread("../immagini/splash.png", IMREAD_GRAYSCALE);
 
     int k = 3;
 

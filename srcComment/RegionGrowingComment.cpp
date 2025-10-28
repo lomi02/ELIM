@@ -1,66 +1,84 @@
 #include <opencv2/opencv.hpp>
-using namespace std;
+#include <stack>
 using namespace cv;
+using namespace std;
 
 /**
- * Implementa l'algoritmo di region growing per la segmentazione di immagini.
+ * Applica l'algoritmo di Region Growing per segmentare un'immagine in scala di grigi.
  *
- * Parte da un punto seed e propaga la regione considerando i pixel adiacenti
- * la cui intensità è simile (in base a una soglia). Usa una strategia BFS.
+ * Questa funzione esegue i seguenti passaggi:
+ * 1. Scorre tutti i pixel dell'immagine come semi iniziali
+ * 2. Per ogni seed non ancora etichettato, espande la regione includendo i vicini simili
+ * 3. La similarità è basata sulla differenza assoluta dei valori di intensità
+ * 4. Se la regione è abbastanza grande, le assegna un'etichetta unica; altrimenti viene etichettata come rumore
+ * 5. Restituisce una mappa di etichette con tutte le regioni segmentate
  *
- * @param input     Immagine di input in scala di grigi (8-bit)
- * @param similTH   Soglia di similarità per accettare un pixel nella regione
- * @param seed      Punto di partenza da cui inizia la crescita della regione
- * @return          Immagine binaria (255 = pixel nella regione, 0 = sfondo)
+ * @param input  Immagine in input (scala di grigi)
+ *
+ * @return Matrice di etichette (CV_8U) dove ogni regione ha un valore unico
  */
-Mat region_growing(Mat &input, int similTH, Point seed) {
+Mat regionGrowing(Mat &input) {
+    Mat src = input.clone();
 
-    // Crea una matrice per tenere traccia dei pixel già visitati
-    Mat visited = Mat::zeros(input.size(), CV_8U);
+    // Parametri dell'algoritmo
+    int similarityThreshold = 5;       // Differenza massima tra pixel per essere considerati simili
+    double minAreaFactor = 0.01;       // Frazione minima di area dell'immagine per accettare la regione
+    uchar maxLabels = 100;             // Numero massimo di etichette
 
-    // Coda per la BFS (Breadth-First Search)
-    queue<Point> pixelQueue;
-    pixelQueue.push(seed);          // Aggiunge il seed alla coda
-    visited.at<uchar>(seed) = 1;    // Marca il seed come visitato
+    int minArea = int(minAreaFactor * src.rows * src.cols);     // Calcolo area minima
+    Mat labels = Mat::zeros(src.rows, src.cols, CV_8U);         // Matrice di etichette inizializzata a 0
+    Mat regionMask = Mat::zeros(src.rows, src.cols, CV_8U);     // Maschera temporanea della regione
+    uchar currentLabel = 1;                                     // Etichetta corrente
 
-    // Definizione dei 8 vicini (connessione 8-way)
-    Point neighbors[8] = {
-        Point(-1, -1),  Point(-1, 0),   Point(-1, 1),
-        Point(0, -1),                   Point(0, 1),
-        Point(1, -1),   Point(1, 0),    Point(1, 1)
+    // 8 vicini (connessione 8) per esplorazione dei pixel adiacenti
+    const Point neighbors[8] = {
+        Point(1, 0), Point(1, -1), Point(0, -1), Point(-1, -1),
+        Point(-1, 0), Point(-1, 1), Point(0, 1), Point(1, 1)
     };
 
-    // Immagine di output: inizialmente tutta nera (0)
-    Mat out = Mat::zeros(input.size(), CV_8U);
+    // Passo 1: Scansione di tutti i pixel dell'immagine
+    for (int x = 0; x < src.cols; x++) {
+        for (int y = 0; y < src.rows; y++) {
+            Point seed(x, y);
+            if (labels.at<uchar>(seed) != 0) continue; // Salta pixel già etichettati
 
-    // Algoritmo principale - esplora i pixel finché la coda non è vuota
-    while (!pixelQueue.empty()) {
+            // Stack per l'espansione della regione
+            stack<Point> points;
+            points.push(seed);
+            regionMask.setTo(0); // Reset maschera regione
 
-        // Estrae il pixel corrente dalla coda
-        Point currentPx = pixelQueue.front();
-        pixelQueue.pop();
+            // Passo 2: Espansione della regione usando Region Growing
+            while (!points.empty()) {
+                Point p = points.top();
+                points.pop();
+                regionMask.at<uchar>(p) = 1;
+                uchar centerVal = src.at<uchar>(p);
 
-        // Marca il pixel corrente come parte della regione (255 = bianco)
-        out.at<uchar>(currentPx) = 255;
+                // Passo 3: Controllo dei pixel vicini
+                for (int i = 0; i < 8; i++) {
+                    Point q = p + neighbors[i];
+                    if (q.x < 0 || q.x >= src.cols || q.y < 0 || q.y >= src.rows)
+                        continue; // Salta pixel fuori immagine
+                    if (labels.at<uchar>(q) || regionMask.at<uchar>(q))
+                        continue; // Salta pixel già etichettati o già nella regione
+                    uchar neighVal = src.at<uchar>(q);
+                    if (abs(int(centerVal) - int(neighVal)) < similarityThreshold) {
+                        regionMask.at<uchar>(q) = 1;
+                        points.push(q); // Aggiunge alla regione
+                    }
+                }
+            }
 
-        // Scorre tutti i vicini
-        for (Point &offset: neighbors) {
-            Point neighPx = currentPx + offset;
-
-            // Verifica le condizioni per includere il vicino:
-            // 1. Deve essere dentro i bordi dell'immagine
-            // 2. Non deve essere stato visitato
-            // 3. La differenza di intensità deve essere <= soglia
-            if (neighPx.x >= 0 && neighPx.x < input.cols &&
-                neighPx.y >= 0 && neighPx.y < input.rows &&
-                visited.at<uchar>(neighPx) == 0 &&
-                abs(input.at<uchar>(currentPx) - input.at<uchar>(neighPx)) <= similTH) {
-
-                visited.at<uchar>(neighPx) = 1;     // Marca il vicino come visitato
-                pixelQueue.push(neighPx);           // Aggiunge alla coda per processarlo
+            // Passo 4: Verifica della dimensione della regione
+            int regionArea = int(sum(regionMask)[0]);
+            if (regionArea > minArea) {
+                labels += regionMask * currentLabel; // Assegna etichetta unica
+                if (++currentLabel > maxLabels) return labels; // Limite di etichette
+            } else {
+                labels += regionMask * 255; // Region considered noise
             }
         }
     }
 
-    return out;  // Restituisce la regione segmentata come immagine binaria
+    return labels;
 }
