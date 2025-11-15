@@ -47,13 +47,18 @@ Mat otsu(Mat &input) {
     int bestTH = 0;       // Soglia ottimale
 
     for (int k = 0; k < 256; k++) {
-        w += hist[k];            // Aggiorna peso classe 0
-        if (w == 0.0 || w == 1.0) continue; // Evita divisione per zero
-        cMean += k * hist[k];    // Aggiorna media cumulativa classe 0
-        double var = pow(gMean * w - cMean, 2) / (w * (1.0 - w)); // Varianza inter-classi
-        if (var > maxVar) {
-            maxVar = var;
-            bestTH = k;          // Aggiorna soglia ottimale
+        w += hist[k];               // Aggiorna peso classe 0
+
+        // Evita divisione per zero
+        if (w > 0.0 && w < 1.0) {
+            cMean += k * hist[k];       // Aggiorna media cumulativa classe 0
+
+            // Varianza inter-classi
+            double var = pow(gMean * w - cMean, 2) / (w * (1.0 - w));
+            if (var > maxVar) {
+                maxVar = var;
+                bestTH = k;         // Aggiorna soglia ottimale
+            }
         }
     }
 

@@ -29,12 +29,14 @@ Mat otsu(Mat &input) {
 
     for (int k = 0; k < 256; k++) {
         w += hist[k];
-        if (w == 0.0 || w == 1.0) continue;
-        cMean += k * hist[k];
-        double var = pow(gMean * w - cMean, 2) / (w * (1.0 - w));
-        if (var > maxVar) {
-            maxVar = var;
-            bestTH = k;
+
+        if (w > 0.0 && w < 1.0) {
+            cMean += k * hist[k];
+            double var = pow(gMean * w - cMean, 2) / (w * (1.0 - w));
+            if (var > maxVar) {
+                maxVar = var;
+                bestTH = k;
+            }
         }
     }
 
