@@ -26,8 +26,7 @@ Mat otsu(Mat &input) {
     vector<double> hist(256, 0.0);
     for (int x = 0; x < img.rows; x++) {
         for (int y = 0; y < img.cols; y++) {
-            uchar val = img.at<uchar>(x, y);
-            hist[val] += 1.0; // Incrementa il conteggio del livello di grigio
+            hist[img.at<uchar>(x, y)] += 1.0;   // Incrementa il conteggio del livello di grigio
         }
     }
 
