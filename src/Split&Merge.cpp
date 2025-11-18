@@ -15,8 +15,7 @@ public:
     bool isMerged[4] = {false};
     double stddev, mean;
 
-    TNode(Rect R) : region(R) {
-    }
+    TNode(Rect R) : region(R) {}
 };
 
 TNode *split(Mat &img, Rect R) {

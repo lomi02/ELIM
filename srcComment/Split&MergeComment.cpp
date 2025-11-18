@@ -104,7 +104,6 @@ void merge(TNode *root) {
     // Verifica se questo nodo è stato suddiviso
     // (stesse condizioni usate durante lo split)
     if (root->region.width > tSize && root->stddev > smTH) {
-
         // Pre-calcola le medie come interi per evitare cast multipli
         // Questo rende i confronti più efficienti
         int mean[4];
@@ -114,7 +113,7 @@ void merge(TNode *root) {
         // Esamina tutte le possibili coppie di regioni adiacenti
         // Le regioni sono disposte in senso circolare: 0→1→2→3→0
         for (int i = 0; i < 4; i++) {
-            int next = (i + 1) % 4;  // Regione successiva (con wrap-around)
+            int next = (i + 1) % 4; // Regione successiva (con wrap-around)
 
             // Se le medie di due regioni adiacenti sono simili:
             // (differenza assoluta < mTH)
@@ -127,8 +126,8 @@ void merge(TNode *root) {
                 root->isMerged[i] = root->isMerged[next] = true;
 
                 // Tenta di espandere il gruppo con una terza regione
-                int next2 = (i + 2) % 4;  // Due posizioni avanti
-                int prev = (i + 3) % 4;   // Una posizione indietro (equivalente a i-1)
+                int next2 = (i + 2) % 4; // Due posizioni avanti
+                int prev = (i + 3) % 4; // Una posizione indietro (equivalente a i-1)
 
                 // Caso 1: la regione next2 è simile a next
                 if (abs(mean[next] - mean[next2]) < mTH) {
@@ -150,7 +149,6 @@ void merge(TNode *root) {
         for (int i = 0; i < 4; i++)
             if (!root->isMerged[i])
                 merge(root->regions[i]);
-
     } else {
         // Questo nodo è una foglia (regione omogenea o troppo piccola)
         // Aggiungila direttamente come regione da segmentare
@@ -172,7 +170,7 @@ void segment(TNode *root, Mat &img) {
     float val = 0;
 
     // Somma tutte le medie delle regioni nel gruppo
-    for (auto node : root->merged)
+    for (auto node: root->merged)
         val += node->mean;
 
     // Dividi per il numero di regioni per ottenere la media complessiva
@@ -180,7 +178,7 @@ void segment(TNode *root, Mat &img) {
 
     // Assegna il valore medio uniforme a tutte le regioni del gruppo
     // Questo crea l'effetto di segmentazione visibile nell'immagine finale
-    for (auto node : root->merged)
+    for (auto node: root->merged)
         img(node->region) = (int) val;
 
     // Processa ricorsivamente le sotto-regioni che non sono state fuse
