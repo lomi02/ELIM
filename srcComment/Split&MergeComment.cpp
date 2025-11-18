@@ -48,6 +48,7 @@ public:
  * 5. Restituisce il nodo creato
  */
 TNode *split(Mat &img, Rect R) {
+
     // Crea un nuovo nodo per questa regione
     TNode *root = new TNode(R);
 
@@ -62,6 +63,7 @@ TNode *split(Mat &img, Rect R) {
     // - La deviazione standard deve superare la soglia (smTH)
     //   Una dev. std. alta indica che la regione non è omogenea
     if (R.width > tSize && root->stddev > smTH) {
+
         // Calcola le dimensioni dei quadranti (metà altezza e metà larghezza)
         int h = R.height / 2;
         int w = R.width / 2;
@@ -101,11 +103,11 @@ TNode *split(Mat &img, Rect R) {
  *    - Aggiunge se stesso come regione da segmentare
  */
 void merge(TNode *root) {
-    // Verifica se questo nodo è stato suddiviso
-    // (stesse condizioni usate durante lo split)
+
+    // Verifica se questo nodo è stato suddiviso (stesse condizioni usate durante lo split)
     if (root->region.width > tSize && root->stddev > smTH) {
-        // Pre-calcola le medie come interi per evitare cast multipli
-        // Questo rende i confronti più efficienti
+
+        // Pre-calcola le medie come interi per evitare cast multipli per rendere i confronti più efficienti
         int mean[4];
         for (int i = 0; i < 4; i++)
             mean[i] = (int) root->regions[i]->mean;
@@ -115,9 +117,9 @@ void merge(TNode *root) {
         for (int i = 0; i < 4; i++) {
             int next = (i + 1) % 4; // Regione successiva (con wrap-around)
 
-            // Se le medie di due regioni adiacenti sono simili:
-            // (differenza assoluta < mTH)
+            // Se le medie di due regioni adiacenti sono simili: (differenza assoluta < mTH)
             if (abs(mean[i] - mean[next]) < mTH) {
+
                 // Aggiungi entrambe le regioni al gruppo di fusione
                 root->merged.push_back(root->regions[i]);
                 root->merged.push_back(root->regions[next]);
@@ -126,21 +128,21 @@ void merge(TNode *root) {
                 root->isMerged[i] = root->isMerged[next] = true;
 
                 // Tenta di espandere il gruppo con una terza regione
-                int next2 = (i + 2) % 4; // Due posizioni avanti
-                int prev = (i + 3) % 4; // Una posizione indietro (equivalente a i-1)
+                int next2 = (i + 2) % 4;    // Due posizioni avanti
+                int prev = (i + 3) % 4;     // Una posizione indietro (equivalente a i-1)
 
                 // Caso 1: la regione next2 è simile a next
                 if (abs(mean[next] - mean[next2]) < mTH) {
                     root->merged.push_back(root->regions[next2]);
                     root->isMerged[next2] = true;
                 }
+
                 // Caso 2: la regione prev è simile a i
                 else if (abs(mean[prev] - mean[i]) < mTH) {
                     root->merged.push_back(root->regions[prev]);
                     root->isMerged[prev] = true;
                 }
-                // Nota: usiamo else if perché vogliamo aggiungere al massimo
-                // una terza regione per gruppo
+                // Nota: usiamo else if perché vogliamo aggiungere al massimo una terza regione per gruppo
             }
         }
 
@@ -150,6 +152,7 @@ void merge(TNode *root) {
             if (!root->isMerged[i])
                 merge(root->regions[i]);
     } else {
+
         // Questo nodo è una foglia (regione omogenea o troppo piccola)
         // Aggiungila direttamente come regione da segmentare
         root->merged.push_back(root);
@@ -166,6 +169,7 @@ void merge(TNode *root) {
  * 2. Chiama ricorsivamente segment sulle sotto-regioni non fuse
  */
 void segment(TNode *root, Mat &img) {
+
     // Calcola la media del gruppo di regioni fuse
     float val = 0;
 
@@ -181,8 +185,7 @@ void segment(TNode *root, Mat &img) {
     for (auto node: root->merged)
         img(node->region) = (int) val;
 
-    // Processa ricorsivamente le sotto-regioni che non sono state fuse
-    // a questo livello (potrebbero avere le loro fusioni a livelli più profondi)
+    // Processa ricorsivamente le sotto-regioni che non sono state fuse a questo livello
     for (int i = 0; i < 4; i++)
         if (!root->isMerged[i] && root->regions[i])
             segment(root->regions[i], img);
@@ -204,6 +207,7 @@ void segment(TNode *root, Mat &img) {
  * 3. Mostra i risultati
  */
 void SplitMerge(Mat &input) {
+
     // Clona l'immagine per non modificare l'originale
     Mat img = input.clone();
 
