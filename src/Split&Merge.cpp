@@ -41,22 +41,22 @@ TNode *split(Mat &img, Rect R) {
 
 void merge(TNode *root) {
     if (root->region.width > tSize && root->stddev > smTH) {
-        int m[4];
+        int mean[4];
         for (int i = 0; i < 4; i++)
-            m[i] = (int) root->regions[i]->mean;
+            mean[i] = (int) root->regions[i]->mean;
 
         for (int i = 0; i < 4; i++) {
             int next = (i + 1) % 4;
-            if (abs(m[i] - m[next]) < mTH) {
+            if (abs(mean[i] - mean[next]) < mTH) {
                 root->merged.push_back(root->regions[i]);
                 root->merged.push_back(root->regions[next]);
                 root->isMerged[i] = root->isMerged[next] = true;
 
                 int n2 = (i + 2) % 4, prev = (i + 3) % 4;
-                if (abs(m[next] - m[n2]) < mTH) {
+                if (abs(mean[next] - mean[n2]) < mTH) {
                     root->merged.push_back(root->regions[n2]);
                     root->isMerged[n2] = true;
-                } else if (abs(m[prev] - m[i]) < mTH) {
+                } else if (abs(mean[prev] - mean[i]) < mTH) {
                     root->merged.push_back(root->regions[prev]);
                     root->isMerged[prev] = true;
                 }
