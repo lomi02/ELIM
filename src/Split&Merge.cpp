@@ -1,118 +1,112 @@
 #include <opencv2/opencv.hpp>
+
 using namespace cv;
 using namespace std;
 
-double smThreshold = 10;
-int minRegSize = 8;
-int mThreshold = 1;
+double smTH = 10;
+int tSize = 8;
+int mTH = 5;
 
 class TNode {
 public:
     Rect region;
-    vector<TNode *> regions;
+    vector<TNode *> regions = vector<TNode *>(4, nullptr);
     vector<TNode *> merged;
-    vector<bool> isMerged;
-    double stddev, mean;
-
-    TNode(Rect R) : region(R), regions(4, nullptr), isMerged(4, false) {
-    }
-
-    bool shouldSplit() const {
-        return region.width > minRegSize && stddev > smThreshold;
-    }
+    vector<bool> isMerged = vector<bool>(4, false);
+    double stddev, mean, meanMerged;
+    TNode(Rect R) { region = R; }
 };
 
-TNode *split(Mat &src, Rect R) {
-    TNode *node = new TNode(R);
+TNode *split(Mat &img, Rect R) {
+    TNode *root = new TNode(R);
+
     Scalar stddev, mean;
-    meanStdDev(src(R), mean, stddev);
-    node->stddev = stddev[0];
-    node->mean = mean[0];
+    meanStdDev(img(R), mean, stddev);
 
-    if (node->shouldSplit()) {
-        int halfH = R.height / 2;
-        int halfW = R.width / 2;
-        node->regions[0] = split(src, Rect(R.x, R.y, halfH, halfW));
-        node->regions[1] = split(src, Rect(R.x, R.y + halfW, halfH, halfW));
-        node->regions[2] = split(src, Rect(R.x + halfH, R.y, halfH, halfW));
-        node->regions[3] = split(src, Rect(R.x + halfH, R.y + halfW, halfH, halfW));
+    root->mean = mean[0];
+    root->stddev = stddev[0];
+
+    if (R.width > tSize && root->stddev > smTH) {
+        root->regions[0] = split(img, Rect(R.x, R.y, R.height / 2, R.width / 2));
+        root->regions[1] = split(img, Rect(R.x, R.y + R.width / 2, R.height / 2, R.width / 2));
+        root->regions[2] = split(img, Rect(R.x + R.height / 2, R.y, R.height / 2, R.width / 2));
+        root->regions[3] = split(img, Rect(R.x + R.height / 2, R.y + R.width / 2, R.height / 2, R.width / 2));
     }
 
-    rectangle(src, R, Scalar(0));
-    return node;
+    rectangle(img, R, Scalar(0));
+    return root;
 }
 
-bool canMerge(TNode *a, TNode *b) {
-    return abs((int) a->mean - (int) b->mean) < mThreshold;
-}
+void merge(TNode *root) {
+    if (root->region.width > tSize && root->stddev > smTH) {
+        for (int i = 0; i < 4; i++) {
+            if (abs((int) root->regions[i]->mean - (int) root->regions[(i + 1) % 4]->mean) < mTH) {
+                root->merged.push_back(root->regions[i]);
+                root->isMerged[i] = true;
+                root->merged.push_back(root->regions[(i + 1) % 4]);
+                root->isMerged[(i + 1) % 4] = true;
 
-void merge(TNode *node) {
-    if (!node->shouldSplit()) {
-        node->merged.push_back(node);
-        return;
-    }
-
-    for (int i = 0; i < 4; i++) {
-        if (canMerge(node->regions[i], node->regions[(i + 1) % 4])) {
-            node->merged.push_back(node->regions[i]);
-            node->isMerged[i] = true;
-            node->merged.push_back(node->regions[(i + 1) % 4]);
-            node->isMerged[(i + 1) % 4] = true;
-
-            if (canMerge(node->regions[(i + 1) % 4], node->regions[(i + 2) % 4])) {
-                node->merged.push_back(node->regions[(i + 2) % 4]);
-                node->isMerged[(i + 2) % 4] = true;
-                break;
-            }
-            if (canMerge(node->regions[(i + 3) % 4], node->regions[i])) {
-                node->merged.push_back(node->regions[(i + 3) % 4]);
-                node->isMerged[(i + 3) % 4] = true;
-                break;
+                if (abs((int) root->regions[(i + 1) % 4]->mean - (int) root->regions[(i + 2) % 4]->mean) < mTH) {
+                    root->merged.push_back(root->regions[(i + 2) % 4]);
+                    root->isMerged[(i + 2) % 4] = true;
+                    break;
+                }
+                if (abs((int) root->regions[(i + 3) % 4]->mean - (int) root->regions[i]->mean) < mTH) {
+                    root->merged.push_back(root->regions[(i + 3) % 4]);
+                    root->isMerged[(i + 3) % 4] = true;
+                    break;
+                }
             }
         }
-    }
-
-    for (int i = 0; i < 4; i++)
-        if (!node->isMerged[i])
-            merge(node->regions[i]);
+        for (int i = 0; i < 4; i++)
+            if (!root->isMerged[i])
+                merge(root->regions[i]);
+    } else
+        root->merged.push_back(root);
 }
 
-void segment(TNode *node, Mat &dst) {
+void segment(TNode *root, Mat &img) {
     float val = 0;
-    for (size_t i = 0; i < node->merged.size(); i++)
-        val += node->merged[i]->mean;
-    val /= node->merged.size();
 
-    for (size_t i = 0; i < node->merged.size(); i++)
-        dst(node->merged[i]->region) = (int) val;
+    for (auto node: root->merged)
+        val += node->mean;
 
-    for (int i = 0; i < 4; i++)
-        if (!node->isMerged[i] && node->regions[i])
-            segment(node->regions[i], dst);
+    val /= root->merged.size();
+
+    for (auto node: root->merged)
+        img(node->region) = (int) val;
+
+    for (int i = 0; i < 4; i++) {
+        if (!root->isMerged[i] && root->regions[i])
+            segment(root->regions[i], img);
+    }
 }
 
-void splitAndMerge(Mat &src, Mat &output, Mat &working) {
-    int exponent = log(min(src.rows, src.cols)) / log(2);
-    int size = pow(2.0, (double) exponent);
-    working = src(Rect(0, 0, size, size)).clone();
+void SplitMerge(Mat &input) {
+    Mat img = input.clone();
+    GaussianBlur(img, img, Size(3, 3), 1, 1);
 
-    GaussianBlur(working, working, Size(3, 3), 0, 0);
-    TNode *node = split(working, Rect(0, 0, working.rows, working.cols));
-    merge(node);
+    int exponent = log(min(img.cols, img.rows)) / log(2);
+    int quadSize = pow(2.0, (double) exponent);
 
-    output = src(Rect(0, 0, size, size)).clone();
-    segment(node, output);
+    Rect square = Rect(0, 0, quadSize, quadSize);
+    img = img(square).clone();
+
+    Mat imgSeg = img.clone();
+
+    TNode *root = split(img, Rect(0, 0, img.rows, img.cols));
+    merge(root);
+    segment(root, imgSeg);
+
+    imshow("Quad Tree", img);
+    imshow("Segmented", imgSeg);
+    waitKey(0);
 }
 
 int main() {
     Mat src = imread("../immagini/foglia.png", IMREAD_GRAYSCALE);
 
-    Mat dst, working;
-    splitAndMerge(src, dst, working);
-
-    imshow("Working Image", working);
-    imshow("Output Image", dst);
-    waitKey(0);
+    SplitMerge(src);
 
     return 0;
 }
