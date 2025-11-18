@@ -52,10 +52,10 @@ void merge(TNode *root) {
                 root->merged.push_back(root->regions[next]);
                 root->isMerged[i] = root->isMerged[next] = true;
 
-                int n2 = (i + 2) % 4, prev = (i + 3) % 4;
-                if (abs(mean[next] - mean[n2]) < mTH) {
-                    root->merged.push_back(root->regions[n2]);
-                    root->isMerged[n2] = true;
+                int next2 = (i + 2) % 4, prev = (i + 3) % 4;
+                if (abs(mean[next] - mean[next2]) < mTH) {
+                    root->merged.push_back(root->regions[next2]);
+                    root->isMerged[next2] = true;
                 } else if (abs(mean[prev] - mean[i]) < mTH) {
                     root->merged.push_back(root->regions[prev]);
                     root->isMerged[prev] = true;
