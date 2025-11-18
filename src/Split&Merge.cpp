@@ -10,11 +10,13 @@ int mTH = 5;
 class TNode {
 public:
     Rect region;
-    vector<TNode *> regions = vector<TNode *>(4, nullptr);
+    TNode *regions[4] = {nullptr};
     vector<TNode *> merged;
-    vector<bool> isMerged = vector<bool>(4, false);
-    double stddev, mean, meanMerged;
-    TNode(Rect R) { region = R; }
+    bool isMerged[4] = {false};
+    double stddev, mean;
+
+    TNode(Rect R) : region(R) {
+    }
 };
 
 TNode *split(Mat &img, Rect R) {
@@ -22,15 +24,15 @@ TNode *split(Mat &img, Rect R) {
 
     Scalar stddev, mean;
     meanStdDev(img(R), mean, stddev);
-
     root->mean = mean[0];
     root->stddev = stddev[0];
 
     if (R.width > tSize && root->stddev > smTH) {
-        root->regions[0] = split(img, Rect(R.x, R.y, R.height / 2, R.width / 2));
-        root->regions[1] = split(img, Rect(R.x, R.y + R.width / 2, R.height / 2, R.width / 2));
-        root->regions[2] = split(img, Rect(R.x + R.height / 2, R.y, R.height / 2, R.width / 2));
-        root->regions[3] = split(img, Rect(R.x + R.height / 2, R.y + R.width / 2, R.height / 2, R.width / 2));
+        int h = R.height / 2, w = R.width / 2;
+        root->regions[0] = split(img, Rect(R.x, R.y, h, w));
+        root->regions[1] = split(img, Rect(R.x, R.y + w, h, w));
+        root->regions[2] = split(img, Rect(R.x + h, R.y, h, w));
+        root->regions[3] = split(img, Rect(R.x + h, R.y + w, h, w));
     }
 
     rectangle(img, R, Scalar(0));
@@ -39,22 +41,24 @@ TNode *split(Mat &img, Rect R) {
 
 void merge(TNode *root) {
     if (root->region.width > tSize && root->stddev > smTH) {
-        for (int i = 0; i < 4; i++) {
-            if (abs((int) root->regions[i]->mean - (int) root->regions[(i + 1) % 4]->mean) < mTH) {
-                root->merged.push_back(root->regions[i]);
-                root->isMerged[i] = true;
-                root->merged.push_back(root->regions[(i + 1) % 4]);
-                root->isMerged[(i + 1) % 4] = true;
+        int m[4];
+        for (int i = 0; i < 4; i++)
+            m[i] = (int) root->regions[i]->mean;
 
-                if (abs((int) root->regions[(i + 1) % 4]->mean - (int) root->regions[(i + 2) % 4]->mean) < mTH) {
-                    root->merged.push_back(root->regions[(i + 2) % 4]);
-                    root->isMerged[(i + 2) % 4] = true;
-                    break;
-                }
-                if (abs((int) root->regions[(i + 3) % 4]->mean - (int) root->regions[i]->mean) < mTH) {
-                    root->merged.push_back(root->regions[(i + 3) % 4]);
-                    root->isMerged[(i + 3) % 4] = true;
-                    break;
+        for (int i = 0; i < 4; i++) {
+            int next = (i + 1) % 4;
+            if (abs(m[i] - m[next]) < mTH) {
+                root->merged.push_back(root->regions[i]);
+                root->merged.push_back(root->regions[next]);
+                root->isMerged[i] = root->isMerged[next] = true;
+
+                int n2 = (i + 2) % 4, prev = (i + 3) % 4;
+                if (abs(m[next] - m[n2]) < mTH) {
+                    root->merged.push_back(root->regions[n2]);
+                    root->isMerged[n2] = true;
+                } else if (abs(m[prev] - m[i]) < mTH) {
+                    root->merged.push_back(root->regions[prev]);
+                    root->isMerged[prev] = true;
                 }
             }
         }
@@ -67,19 +71,16 @@ void merge(TNode *root) {
 
 void segment(TNode *root, Mat &img) {
     float val = 0;
-
     for (auto node: root->merged)
         val += node->mean;
-
     val /= root->merged.size();
 
     for (auto node: root->merged)
         img(node->region) = (int) val;
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
         if (!root->isMerged[i] && root->regions[i])
             segment(root->regions[i], img);
-    }
 }
 
 void SplitMerge(Mat &input) {
