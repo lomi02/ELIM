@@ -21,7 +21,7 @@ Mat kmeans(Mat &input, int k) {
     Mat img = input.clone();
 
     // Inizializzazione casuale
-    srand(static_cast<unsigned>(time(nullptr)));
+    srand(time(nullptr));
 
     // Passo 1: Inizializzazione dei centroidi scegliendo pixel casuali
     vector<uchar> centroids(k);
@@ -47,8 +47,7 @@ Mat kmeans(Mat &input, int k) {
 
                 int best = 0;
                 for (int i = 1; i < k; i++)
-                    if (abs(static_cast<int>(centroids[i]) - pixel) <
-                        abs(static_cast<int>(centroids[best]) - pixel))
+                    if (abs(centroids[i] - pixel) < abs(centroids[best] - pixel))
                         best = i; // Trova il centroide più vicino
                 clusters[best].push_back(Point(x, y));
             }
@@ -63,8 +62,8 @@ Mat kmeans(Mat &input, int k) {
             for (size_t j = 0; j < clusters[i].size(); j++)
                 sum += img.at<uchar>(clusters[i][j].x, clusters[i][j].y);
 
-            uchar newCentroid = static_cast<uchar>(sum / clusters[i].size()); // Media dei pixel
-            if (abs(static_cast<int>(newCentroid) - centroids[i]) > 0)
+            uchar newCentroid = sum / clusters[i].size(); // Media dei pixel
+            if (newCentroid != centroids[i])
                 changed = true; // Se cambia almeno un centroide, continua iterazioni
             centroids[i] = newCentroid;
         }

@@ -4,7 +4,7 @@ using namespace cv;
 
 Mat kmeans(Mat &input, int k) {
     Mat img = input.clone();
-    srand(static_cast<unsigned>(time(nullptr)));
+    srand(time(nullptr));
 
     vector<uchar> centroids(k);
     for (int i = 0; i < k; i++) {
@@ -25,8 +25,7 @@ Mat kmeans(Mat &input, int k) {
 
                 int best = 0;
                 for (int i = 1; i < k; i++)
-                    if (abs(static_cast<int>(centroids[i]) - pixel) <
-                        abs(static_cast<int>(centroids[best]) - pixel))
+                    if (abs(centroids[i] - pixel) < abs(centroids[best] - pixel))
                         best = i;
                 clusters[best].push_back(Point(x, y));
             }
@@ -40,8 +39,8 @@ Mat kmeans(Mat &input, int k) {
             for (size_t j = 0; j < clusters[i].size(); j++)
                 sum += img.at<uchar>(clusters[i][j].x, clusters[i][j].y);
 
-            uchar newCentroid = static_cast<uchar>(sum / clusters[i].size());
-            if (abs(static_cast<int>(newCentroid) - centroids[i]) > 0)
+            uchar newCentroid = sum / clusters[i].size();
+            if (newCentroid != centroids[i])
                 changed = true;
             centroids[i] = newCentroid;
         }
