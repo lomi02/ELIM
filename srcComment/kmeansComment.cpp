@@ -32,12 +32,12 @@ Mat kmeans(Mat &input, int k) {
     }
 
     // Cluster: vettore di punti assegnati a ciascun centroide
-    vector<vector<Point> > clusters(k);
+    vector<vector<Point>> clusters(k);
 
     // Passo 2-4: Iterazioni principali dell'algoritmo K-means
     for (int iter = 0; iter < 50; iter++) { // Massimo 50 iterazioni
         // Svuota i cluster dall'iterazione precedente
-        for (size_t i = 0; i < clusters.size(); i++)
+        for (int i = 0; i < k; i++)
             clusters[i].clear();
 
         // Assegnazione dei pixel al cluster più vicino
@@ -59,7 +59,7 @@ Mat kmeans(Mat &input, int k) {
                 continue;
 
             int sum = 0;
-            for (size_t j = 0; j < clusters[i].size(); j++)
+            for (int j = 0; j < clusters[i].size(); j++)
                 sum += img.at<uchar>(clusters[i][j].x, clusters[i][j].y);
 
             uchar newCentroid = sum / clusters[i].size(); // Media dei pixel
@@ -75,7 +75,7 @@ Mat kmeans(Mat &input, int k) {
     // Passo 5: Assegna a ciascun pixel il valore del centroide del cluster
     Mat out = img.clone();
     for (int i = 0; i < k; i++)
-        for (size_t j = 0; j < clusters[i].size(); j++)
+        for (int j = 0; j < clusters[i].size(); j++)
             out.at<uchar>(clusters[i][j].x, clusters[i][j].y) = centroids[i];
 
     return out;

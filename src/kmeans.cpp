@@ -13,10 +13,10 @@ Mat kmeans(Mat &input, int k) {
         centroids[i] = img.at<uchar>(x, y);
     }
 
-    vector<vector<Point> > clusters(k);
+    vector<vector<Point>> clusters(k);
 
     for (int iter = 0; iter < 50; iter++) {
-        for (size_t i = 0; i < clusters.size(); i++)
+        for (int i = 0; i < k; i++)
             clusters[i].clear();
 
         for (int x = 0; x < img.rows; x++)
@@ -36,7 +36,7 @@ Mat kmeans(Mat &input, int k) {
                 continue;
 
             int sum = 0;
-            for (size_t j = 0; j < clusters[i].size(); j++)
+            for (int j = 0; j < clusters[i].size(); j++)
                 sum += img.at<uchar>(clusters[i][j].x, clusters[i][j].y);
 
             uchar newCentroid = sum / clusters[i].size();
@@ -51,7 +51,7 @@ Mat kmeans(Mat &input, int k) {
 
     Mat out = img.clone();
     for (int i = 0; i < k; i++)
-        for (size_t j = 0; j < clusters[i].size(); j++)
+        for (int j = 0; j < clusters[i].size(); j++)
             out.at<uchar>(clusters[i][j].x, clusters[i][j].y) = centroids[i];
 
     return out;
