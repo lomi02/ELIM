@@ -19,19 +19,17 @@ Mat kmeans(Mat &input, int k) {
         for (size_t i = 0; i < clusters.size(); i++)
             clusters[i].clear();
 
-        for (int x = 0; x < img.rows; x++) {
+        for (int x = 0; x < img.rows; x++)
             for (int y = 0; y < img.cols; y++) {
                 uchar pixel = img.at<uchar>(x, y);
 
                 int best = 0;
-                for (int i = 1; i < k; i++) {
+                for (int i = 1; i < k; i++)
                     if (abs(static_cast<int>(centroids[i]) - pixel) <
                         abs(static_cast<int>(centroids[best]) - pixel))
                         best = i;
-                }
                 clusters[best].push_back(Point(x, y));
             }
-        }
 
         bool changed = false;
         for (int i = 0; i < k; i++) {
