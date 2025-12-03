@@ -49,13 +49,9 @@ Mat canny(Mat &input, int cannyLTH, int cannyHTH) {
     Mat out = Mat::zeros(NMS.size(), CV_8U);
     for (int x = 1; x < NMS.rows; x++)
         for (int y = 1; y < NMS.cols; y++)
-            if (NMS.at<uchar>(x, y) > cannyLTH && NMS.at<uchar>(x, y) < cannyHTH) {
+            if (NMS.at<uchar>(x, y) > cannyLTH && NMS.at<uchar>(x, y) < cannyHTH)
                 out.at<uchar>(x, y) = 255;
-                for (int nx = -1; nx <= 1; nx++)
-                    for (int ny = -1; ny <= 1; ny++)
-                        if (NMS.at<uchar>(x + nx, y + ny) > cannyLTH && NMS.at<uchar>(x + nx, y + ny) < cannyHTH)
-                            out.at<uchar>(x + nx, y + ny) = 255;
-            }
+
     return out;
 }
 
