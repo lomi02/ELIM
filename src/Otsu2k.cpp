@@ -11,10 +11,6 @@ Mat otsu2k(Mat &input) {
         for (int y = 0; y < img.cols; y++)
             hist[img.at<uchar>(x, y)]++;
 
-    double tot = img.rows * img.cols;
-    for (int i = 0; i < 256; i++)
-        hist[i] /= tot;
-
     double gMean = 0.0;
     for (int i = 0; i < 256; i++)
         gMean += i * hist[i];
@@ -24,8 +20,8 @@ Mat otsu2k(Mat &input) {
 
     for (int t1 = 0; t1 < 255; t1++)
         for (int t2 = t1 + 1; t2 < 256; t2++) {
-            double w0 = 0, w1 = 0, w2 = 0;
-            double sum0 = 0, sum1 = 0, sum2 = 0;
+            double w0 = 0.0, w1 = 0.0, w2 = 0.0;
+            double sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
 
             for (int i = 0; i <= t1; i++) {
                 w0 += hist[i];
